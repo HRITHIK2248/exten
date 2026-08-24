@@ -1,0 +1,457 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  width: 390px;
+  min-height: 280px;
+  margin: 0;
+  color: #101828;
+  background: #f8fafc;
+  font-family: Arial, sans-serif;
+}
+
+.app {
+  padding: 16px;
+}
+
+.header {
+  margin-bottom: 16px;
+}
+
+h1 {
+  margin: 0;
+  color: #101828;
+  font-size: 18px;
+  line-height: 1.25;
+}
+
+.header p {
+  margin: 5px 0 0;
+  color: #667085;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.primary-button,
+.secondary-button,
+.copy-button,
+.image-copy-button {
+  border: 0;
+  border-radius: 7px;
+  cursor: pointer;
+  font-family: Arial, sans-serif;
+  font-weight: 700;
+}
+
+.primary-button {
+  width: 100%;
+  padding: 11px;
+  color: #ffffff;
+  background: #175cd3;
+  font-size: 14px;
+}
+
+.primary-button:hover {
+  background: #1849a9;
+}
+
+.secondary-button {
+  width: 100%;
+  margin-top: 10px;
+  padding: 9px;
+  color: #344054;
+  background: #eaecf0;
+  font-size: 12px;
+}
+
+.secondary-button:hover {
+  background: #d0d5dd;
+}
+
+.secondary-button:disabled,
+.primary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.copy-button {
+  flex: 0 0 auto;
+  padding: 8px 11px;
+  color: #ffffff;
+  background: #087f5b;
+  font-size: 12px;
+}
+
+.copy-button:hover {
+  background: #05603a;
+}
+
+.image-copy-button {
+  width: 100%;
+  margin-top: 8px;
+  padding: 9px;
+  color: #ffffff;
+  background: #6941c6;
+  font-size: 12px;
+}
+
+.image-copy-button:hover {
+  background: #53389e;
+}
+
+.image-copy-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.empty-state {
+  margin-top: 16px;
+  padding: 18px 12px;
+  color: #667085;
+  background: #ffffff;
+  border: 1px solid #eaecf0;
+  border-radius: 9px;
+  font-size: 13px;
+  text-align: center;
+}
+
+.result-card {
+  margin-top: 16px;
+  padding: 14px;
+  background: #ffffff;
+  border: 1px solid #d0d5dd;
+  border-radius: 10px;
+}
+
+.result-heading {
+  margin-bottom: 13px;
+  color: #101828;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.image-section {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.image-block {
+  min-width: 0;
+}
+
+.image-title {
+  margin-bottom: 6px;
+  color: #344054;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.scan-image {
+  display: block;
+  width: 100%;
+  max-height: 280px;
+  object-fit: contain;
+  background: #f2f4f7;
+  border: 1px solid #d0d5dd;
+  border-radius: 7px;
+}
+
+.qr-image {
+  max-height: 220px;
+}
+
+.snapshot-text-block {
+  min-width: 0;
+  margin-top: 0;
+}
+
+.selected-text {
+  display: block;
+  width: 100%;
+  min-height: 100px;
+  margin-top: 6px;
+  padding: 9px;
+  color: #101828;
+  background: #f2f4f7;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.selected-text:focus {
+  outline: 2px solid #84adff;
+  outline-offset: 1px;
+}
+
+.field {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 0;
+  border-bottom: 1px solid #f2f4f7;
+}
+
+.label {
+  display: block;
+  color: #667085;
+  font-size: 12px;
+}
+
+.value {
+  color: #101828;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.address-field,
+.pix-section {
+  margin-top: 12px;
+}
+
+.address-row,
+.copy-value-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.address {
+  min-width: 0;
+  flex: 1;
+  padding: 9px;
+  color: #101828;
+  background: #f2f4f7;
+  border-radius: 6px;
+  font-family: monospace;
+  font-size: 11px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.copy-field {
+  margin-top: 12px;
+}
+
+.details {
+  margin-top: 12px;
+}
+
+.detail {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid #f2f4f7;
+}
+
+.detail-name {
+  color: #667085;
+  font-size: 11px;
+}
+
+.detail-value {
+  color: #344054;
+  font-size: 11px;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.copy-status {
+  min-height: 16px;
+  margin-top: 9px;
+  color: #087f5b;
+  font-size: 11px;
+}
+
+.hidden {
+  display: none !important;
+}
+.snapshot-text-block {
+  min-width: 0;
+  margin-top: 0;
+}
+
+.selected-text {
+  display: block;
+  width: 100%;
+  min-height: 100px;
+  margin-top: 6px;
+  padding: 9px;
+  color: #101828;
+  background: #f2f4f7;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.selected-text:focus {
+  outline: 2px solid #84adff;
+  outline-offset: 1px;
+}
+
+.detected-items {
+  margin-top: 14px;
+}
+
+.detected-group {
+  margin-top: 10px;
+}
+
+.detected-label {
+  margin-bottom: 6px;
+  color: #667085;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.detected-list {
+  display: grid;
+  gap: 7px;
+}
+
+.detected-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.detected-value {
+  min-width: 0;
+  flex: 1;
+  padding: 8px;
+  color: #101828;
+  background: #f2f4f7;
+  border-radius: 6px;
+  font-family: monospace;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.hidden {
+  display: none !important;
+}
+/*
+  Raw QR payload section
+*/
+.raw-payload-section {
+  margin-bottom: 16px;
+}
+
+.raw-payload-text {
+  display: block;
+  width: 100%;
+  min-height: 90px;
+  margin-top: 6px;
+  padding: 9px;
+  color: #101828;
+  background: #f2f4f7;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  font-family: monospace;
+  font-size: 11px;
+  line-height: 1.45;
+  resize: vertical;
+  overflow-wrap: anywhere;
+}
+
+
+/*
+  Website QR section
+*/
+.website-section {
+  margin-bottom: 16px;
+}
+
+.website-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.website-actions button {
+  flex: 1;
+}
+
+.website-warning {
+  margin-top: 10px;
+  padding: 9px;
+  color: #912018;
+  background: #fef3f2;
+  border: 1px solid #fecdca;
+  border-radius: 6px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+/*
+  Email QR section
+*/
+.email-qr-section {
+  margin-bottom: 16px;
+}
+
+.email-qr-section .copy-value-row {
+  align-items: flex-start;
+}
+
+.email-qr-section .address {
+  white-space: pre-wrap;
+}
+
+
+/*
+  Raw payload and website sections
+*/
+.raw-payload-section,
+.website-section {
+  margin-bottom: 16px;
+}
+
+.raw-payload-text {
+  display: block;
+  width: 100%;
+  min-height: 90px;
+  margin-top: 6px;
+  padding: 9px;
+  color: #101828;
+  background: #f2f4f7;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  font-family: monospace;
+  font-size: 11px;
+  line-height: 1.45;
+  resize: vertical;
+  overflow-wrap: anywhere;
+}
+
+.website-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.website-actions button {
+  flex: 1;
+}
+
+.website-warning {
+  margin-top: 10px;
+  padding: 9px;
+  color: #912018;
+  background: #fef3f2;
+  border: 1px solid #fecdca;
+  border-radius: 6px;
+  font-size: 11px;
+  line-height: 1.4;
+}

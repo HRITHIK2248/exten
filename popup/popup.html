@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Document encoding -->
+    <meta charset="utf-8">
+
+    <!-- Popup viewport settings -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1"
+    >
+
+    <title>Payment QR Tool</title>
+
+    <!-- Popup styles -->
+    <link
+      rel="stylesheet"
+      href="popup.css"
+    >
+  </head>
+
+  <body>
+    <main class="app">
+
+      <!-- Extension heading -->
+      <header class="header">
+        <div>
+          <h1>Payment QR Tool</h1>
+
+          <p>
+            Scan and copy payment details.
+          </p>
+        </div>
+      </header>
+
+
+      <!-- Starts QR scanning -->
+      <button
+        id="scanButton"
+        class="primary-button"
+        type="button"
+      >
+        Scan QR
+      </button>
+
+
+      <!-- Starts Snapshot selection -->
+      <button
+        id="snapshotButton"
+        class="secondary-button"
+        type="button"
+      >
+        Snapshot
+      </button>
+
+
+      <!-- Clears the latest result -->
+      <button
+        id="clearButton"
+        class="secondary-button"
+        type="button"
+      >
+        Clear result
+      </button>
+
+
+      <!-- Empty state -->
+      <section
+        id="emptyState"
+        class="empty-state"
+      >
+        No scan result yet.
+      </section>
+
+
+      <!-- Main result card -->
+      <section
+        id="resultCard"
+        class="result-card hidden"
+      >
+
+        <!-- Result heading -->
+        <div
+          id="resultHeading"
+          class="result-heading"
+        >
+          Latest decoded result
+        </div>
+
+
+        <!-- Raw decoded QR payload -->
+        <section
+          id="rawPayloadSection"
+          class="raw-payload-section hidden"
+        >
+          <div class="image-title">
+            Raw decoded information
+          </div>
+
+          <textarea
+            id="rawPayloadText"
+            class="raw-payload-text"
+            readonly
+            placeholder="No raw QR information available."
+          ></textarea>
+
+          <button
+            id="copyRawPayloadButton"
+            class="image-copy-button"
+            type="button"
+          >
+            Copy raw information
+          </button>
+        </section>
+
+
+        <!-- Website URL information -->
+        <section
+          id="websiteSection"
+          class="website-section hidden"
+        >
+          <div class="image-title">
+            Website QR information
+          </div>
+
+          <div class="field">
+            <span class="label">
+              Protocol
+            </span>
+
+            <span
+              id="websiteProtocol"
+              class="value"
+            ></span>
+          </div>
+
+          <div class="field">
+            <span class="label">
+              Domain
+            </span>
+
+            <span
+              id="websiteDomain"
+              class="value"
+            ></span>
+          </div>
+
+          <div class="field">
+            <span class="label">
+              Path
+            </span>
+
+            <span
+              id="websitePath"
+              class="value"
+            ></span>
+          </div>
+
+          <div class="field">
+            <span class="label">
+              Query parameters
+            </span>
+
+            <span
+              id="websiteQuery"
+              class="value"
+            ></span>
+          </div>
+
+          <div class="website-actions">
+            <button
+              id="copyWebsiteButton"
+              class="copy-button"
+              type="button"
+            >
+              Copy URL
+            </button>
+
+            <button
+              id="openWebsiteButton"
+              class="image-copy-button"
+              type="button"
+            >
+              Open URL
+            </button>
+          </div>
+
+          <div
+            id="websiteWarning"
+            class="website-warning hidden"
+          ></div>
+        </section>
+
+
+        <!-- Email QR information -->
+        <section
+          id="emailQrSection"
+          class="email-qr-section hidden"
+        >
+          <div class="image-title">
+            Email QR information
+          </div>
+
+          <div class="copy-field">
+            <span class="label">
+              To
+            </span>
+
+            <div class="copy-value-row">
+              <code
+                id="emailQrTo"
+                class="address"
+              ></code>
+
+              <button
+                id="copyEmailToButton"
+                class="copy-button"
+                type="button"
+              >
+                Copy
+              </button>
+            </div>
+          </div>
+
+          <div
+            id="emailQrCcField"
+            class="copy-field hidden"
+          >
+            <span class="label">
+              CC
+            </span>
+
+            <div class="copy-value-row">
+              <code
+                id="emailQrCc"
+                class="address"
+              ></code>
+
+              <button
+                id="copyEmailCcButton"
+                class="copy-button"
+                type="button"
+              >
+                Copy
+              </button>
+            </div>
+          </div>
+
+          <div
+            id="emailQrBccField"
+            class="copy-field hidden"
+          >
+            <span class="label">
+              BCC
+            </span>
+
+            <div class="copy-value-row">
+              <code
+                id="emailQrBcc"
+                class="address"
+              ></code>
+
+              <button
+                id="copyEmailBccButton"
+                class="copy-button"
+                type="button"
+              >
+                Copy
+              </button>
+            </div>
+          </div>
+
+          <div
+            id="emailQrSubjectField"
+            class="copy-field hidden"
+          >
+            <span class="label">
+              Subject
+            </span>
+
+            <div class="copy-value-row">
+              <code
+                id="emailQrSubject"
+                class="address"
+              ></code>
+
+              <button
+                id="copyEmailSubjectButton"
+                class="copy-button"
+                type="button"
+              >
+                Copy
+              </button>
+            </div>
+          </div>
+
+          <div
+            id="emailQrBodyField"
+            class="copy-field hidden"
+          >
+            <span class="label">
+              Message
+            </span>
+
+            <div class="copy-value-row">
+              <code
+                id="emailQrBody"
+                class="address"
+              ></code>
+
+              <button
+                id="copyEmailBodyButton"
+                class="copy-button"
+                type="button"
+              >
+                Copy
+              </button>
+            </div>
+          </div>
+        </section>
+
+
+        <!-- QR and Snapshot images -->
+        <section
+          id="imageSection"
+          class="image-section hidden"
+        >
+
+          <!-- Highlighted screenshot -->
+          <div class="image-block">
+            <div class="image-title">
+              Highlighted screenshot
+            </div>
+
+            <img
+              id="highlightedScreenshot"
+              class="scan-image"
+              alt="Highlighted webpage screenshot"
+            >
+
+            <button
+              id="copyHighlightedButton"
+              class="image-copy-button"
+              type="button"
+            >
+              Copy highlighted screenshot
+            </button>
+          </div>
+
+
+          <!-- Snapshot detections -->
+          <div
+            id="snapshotTextBlock"
+            class="snapshot-text-block hidden"
+          >
+            <div
+              id="detectedItems"
+              class="detected-items hidden"
+            >
+              <div class="image-title">
+                Detected information
+              </div>
+
+              <div
+                id="detectedEmails"
+                class="detected-group hidden"
+              >
+                <div class="detected-label">
+                  Email addresses
+                </div>
+
+                <div
+                  id="emailList"
+                  class="detected-list"
+                ></div>
+              </div>
+
+              <div
+                id="detectedPhones"
+                class="detected-group hidden"
+              >
+                <div class="detected-label">
+                  Phone numbers
+                </div>
+
+                <div
+                  id="phoneList"
+                  class="detected-list"
+                ></div>
+              </div>
+
+              <div
+                id="detectedUrls"
+                class="detected-group hidden"
+              >
+                <div class="detected-label">
+                  URLs and domains
+                </div>
+
+                <div
+                  id="urlList"
+                  class="detected-list"
+                ></div>
+              </div>
+
+              <div
+                id="detectedAddresses"
+                class="detected-group hidden"
+              >
+                <div class="detected-label">
+                  Possible addresses
+                </div>
+
+                <div
+                  id="addressList"
+                  class="detected-list"
+                ></div>
+              </div>
+            </div>
+
+            <div
+              id="noDetectedItems"
+              class="no-detected-items hidden"
+            >
+              No email, phone number, URL, or address was found.
+            </div>
+          </div>
+
+
+          <!-- QR-only crop -->
+          <div class="image-block">
+            <div class="image-title">
+              QR code crop
+            </div>
+
+            <img
+              id="qrOnlyImage"
+              class="scan-image qr-image"
+              alt="Cropped QR code"
+            >
+
+            <button
+              id="copyQrButton"
+              class="image-copy-button"
+              type="button"
+            >
+              Copy QR only
+            </button>
+          </div>
+        </section>
+
+
+        <!-- General payment information -->
+        <div id="paymentInfo">
+          <div class="field">
+            <span class="label">
+              Type
+            </span>
+
+            <span
+              id="resultType"
+              class="value"
+            ></span>
+          </div>
+
+          <div class="field">
+            <span class="label">
+              Network
+            </span>
+
+            <span
+              id="resultNetwork"
+              class="value"
+            ></span>
+          </div>
+        </div>
+
+
+        <!-- UPI ID or cryptocurrency address -->
+        <div
+          id="addressSection"
+          class="address-field"
+        >
+          <span
+            id="addressLabel"
+            class="label"
+          >
+            ID or address
+          </span>
+
+          <div class="address-row">
+            <code
+              id="resultAddress"
+              class="address"
+            ></code>
+
+            <button
+              id="copyButton"
+              class="copy-button"
+              type="button"
+            >
+              Copy
+            </button>
+          </div>
+
+          <!-- Phone extracted from UPI ID -->
+          <div
+            id="upiPhoneSection"
+            class="upi-phone-section hidden"
+          >
+            <span class="label">
+              Phone number from UPI ID
+            </span>
+
+            <div class="address-row">
+              <code
+                id="upiPhoneNumber"
+                class="address"
+              ></code>
+
+              <button
+                id="copyUpiPhoneButton"
+                class="copy-button"
+                type="button"
+              >
+                Copy phone
+              </button>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- Pix-specific fields -->
+        <div
+          id="pixSection"
+          class="pix-section hidden"
+        >
+          <div class="copy-field">
+            <span class="label">
+              Merchant Name
+            </span>
+
+            <div class="copy-value-row">
+              <code
+                id="pixMerchantName"
+                class="address"
+              ></code>
+
+              <button
+                id="copyMerchantNameButton"
+                class="copy-button"
+                type="button"
+              >
+                Copy
+              </button>
+            </div>
+          </div>
+
+          <div class="copy-field">
+            <span class="label">
+              Merchant City
+            </span>
+
+            <div class="copy-value-row">
+              <code
+                id="pixMerchantCity"
+                class="address"
+              ></code>
+
+              <button
+                id="copyMerchantCityButton"
+                class="copy-button"
+                type="button"
+              >
+                Copy
+              </button>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- QRIS-specific fields -->
+        <div
+          id="qrisSection"
+          class="pix-section hidden"
+        >
+          <div class="copy-field">
+            <span class="label">
+              Merchant Name
+            </span>
+
+            <div class="copy-value-row">
+              <code
+                id="qrisMerchantName"
+                class="address"
+              ></code>
+
+              <button
+                id="copyQrisMerchantNameButton"
+                class="copy-button"
+                type="button"
+              >
+                Copy
+              </button>
+            </div>
+          </div>
+
+          <div class="copy-field">
+            <span class="label">
+              National Merchant ID
+            </span>
+
+            <div class="copy-value-row">
+              <code
+                id="qrisNationalMerchantId"
+                class="address"
+              ></code>
+
+              <button
+                id="copyQrisNationalMerchantIdButton"
+                class="copy-button"
+                type="button"
+              >
+                Copy
+              </button>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- Additional payment details -->
+        <div
+          id="details"
+          class="details"
+        ></div>
+
+
+        <!-- Copy feedback -->
+        <div
+          id="copyStatus"
+          class="copy-status"
+        ></div>
+      </section>
+    </main>
+
+    <!-- Popup JavaScript -->
+    <script src="popup.js"></script>
+  </body>
+</html>

@@ -1,0 +1,972 @@
+"use strict";
+
+/*
+  ============================================================
+  1. Selection state
+  ------------------------------------------------------------
+  These variables remember whether Snapshot mode is active,
+  where the mouse drag started, and which overlay elements
+  are currently displayed on the webpage.
+  ============================================================
+*/
+
+let selectionActive =
+  false;
+
+let selectionStartX =
+  0;
+
+let selectionStartY =
+  0;
+
+let selectionOverlay =
+  null;
+
+let selectionBox =
+  null;
+
+
+/*
+  ============================================================
+  2. Message listener
+  ------------------------------------------------------------
+  The popup or background script sends commands here.
+
+  START_SNAPSHOT_SELECTION:
+    Starts the red area-selection tool.
+
+  START_SELECTION:
+    Keeps compatibility with any older selection workflow.
+
+  HIDE_SCAN_STATUS:
+    Removes an old scan status message.
+
+  QR_SCAN_STATUS:
+    Displays a temporary status message.
+
+  PAYMENT_RESULT:
+    Displays a payment result on the webpage.
+  ============================================================
+*/
+
+browser.runtime.onMessage.addListener(
+  (message) => {
+    if (
+      message.type ===
+      "START_SNAPSHOT_SELECTION"
+    ) {
+      startSnapshotSelection();
+
+      return false;
+    }
+
+    if (
+      message.type ===
+      "START_SELECTION"
+    ) {
+      startSelection();
+
+      return false;
+    }
+
+    if (
+      message.type ===
+      "HIDE_SCAN_STATUS"
+    ) {
+      removeScanStatus();
+
+      return false;
+    }
+
+    if (
+      message.type ===
+      "QR_SCAN_STATUS"
+    ) {
+      showMessage(
+        "Status",
+        message.text,
+        "neutral"
+      );
+
+      return false;
+    }
+
+    if (
+      message.type ===
+      "PAYMENT_RESULT"
+    ) {
+      showPaymentResult(
+        message.result
+      );
+
+      return false;
+    }
+
+    return false;
+  }
+);
+
+
+/*
+  ============================================================
+  3. Start Snapshot selection
+  ------------------------------------------------------------
+  Creates a full-page transparent overlay.
+
+  The overlay captures the mouse drag without changing the
+  actual webpage content. The red rectangle shows the area
+  selected by the user.
+  ============================================================
+*/
+
+function startSnapshotSelection() {
+  if (
+    selectionActive
+  ) {
+    return;
+  }
+
+  selectionActive =
+    true;
+
+  selectionOverlay =
+    document.createElement(
+      "div"
+    );
+
+  selectionBox =
+    document.createElement(
+      "div"
+    );
+
+  selectionOverlay.id =
+    "__qr_snapshot_overlay__";
+
+  selectionBox.id =
+    "__qr_snapshot_selection__";
+
+  selectionOverlay.style.position =
+    "fixed";
+
+  selectionOverlay.style.inset =
+    "0";
+
+  selectionOverlay.style.zIndex =
+    "2147483646";
+
+  selectionOverlay.style.cursor =
+    "crosshair";
+
+  selectionOverlay.style.background =
+    "rgba(0, 0, 0, 0.08)";
+
+  selectionBox.style.position =
+    "fixed";
+
+  selectionBox.style.display =
+    "none";
+
+  selectionBox.style.zIndex =
+    "2147483647";
+
+  selectionBox.style.border =
+    "2px solid #ff1744";
+
+  selectionBox.style.background =
+    "rgba(255, 23, 68, 0.08)";
+
+  selectionOverlay.appendChild(
+    selectionBox
+  );
+
+  document.documentElement.appendChild(
+    selectionOverlay
+  );
+
+  selectionOverlay.addEventListener(
+    "mousedown",
+    handleSelectionStart
+  );
+
+  selectionOverlay.addEventListener(
+    "mousemove",
+    handleSelectionMove
+  );
+
+  selectionOverlay.addEventListener(
+    "mouseup",
+    handleSelectionEnd
+  );
+
+  document.addEventListener(
+    "keydown",
+    handleSelectionEscape,
+    true
+  );
+}
+
+
+/*
+  ============================================================
+  4. Mouse selection handlers
+  ------------------------------------------------------------
+  These functions control the drag operation:
+
+  mousedown:
+    Saves the starting point.
+
+  mousemove:
+    Updates the visible red selection box.
+
+  mouseup:
+    Calculates the final area, extracts only useful text,
+    and sends the snapshot request to the background script.
+  ============================================================
+*/
+
+function handleSelectionStart(
+  event
+) {
+  if (
+    event.button !==
+    0
+  ) {
+    return;
+  }
+
+  selectionStartX =
+    event.clientX;
+
+  selectionStartY =
+    event.clientY;
+
+  selectionBox.style.display =
+    "block";
+
+  updateSelectionBox(
+    event.clientX,
+    event.clientY
+  );
+
+  event.preventDefault();
+}
+
+function handleSelectionMove(
+  event
+) {
+  if (
+    !selectionBox ||
+    selectionBox.style.display !==
+      "block"
+  ) {
+    return;
+  }
+
+  updateSelectionBox(
+    event.clientX,
+    event.clientY
+  );
+
+  event.preventDefault();
+}
+
+function handleSelectionEnd(
+  event
+) {
+  if (
+    !selectionBox ||
+    selectionBox.style.display !==
+      "block"
+  ) {
+    return;
+  }
+
+  const selection =
+    getSelectionRectangle(
+      event.clientX,
+      event.clientY
+    );
+
+  if (
+    selection.width <
+      10 ||
+    selection.height <
+      10
+  ) {
+    cancelSnapshotSelection();
+
+    return;
+  }
+
+  /*
+    Important:
+    We do not copy anything here.
+
+    We only collect text from the selected area so that the
+    popup can detect emails, phones, URLs, and addresses.
+  */
+  const selectedText =
+    extractTextFromArea(
+      selection
+    );
+
+  removeSelectionOverlay();
+
+  browser.runtime.sendMessage({
+    type:
+      "SNAPSHOT_SELECTION",
+
+    selection,
+
+    selectedText
+  });
+
+  event.preventDefault();
+}
+
+
+/*
+  ============================================================
+  5. Draw and calculate the selection rectangle
+  ------------------------------------------------------------
+  This keeps the visible red rectangle aligned with the
+  user's mouse movement.
+  ============================================================
+*/
+
+function updateSelectionBox(
+  currentX,
+  currentY
+) {
+  const selection =
+    getSelectionRectangle(
+      currentX,
+      currentY
+    );
+
+  selectionBox.style.left =
+    `${selection.left}px`;
+
+  selectionBox.style.top =
+    `${selection.top}px`;
+
+  selectionBox.style.width =
+    `${selection.width}px`;
+
+  selectionBox.style.height =
+    `${selection.height}px`;
+}
+
+function getSelectionRectangle(
+  currentX,
+  currentY
+) {
+  const left =
+    Math.min(
+      selectionStartX,
+      currentX
+    );
+
+  const top =
+    Math.min(
+      selectionStartY,
+      currentY
+    );
+
+  const right =
+    Math.max(
+      selectionStartX,
+      currentX
+    );
+
+  const bottom =
+    Math.max(
+      selectionStartY,
+      currentY
+    );
+
+  return {
+    left,
+
+    top,
+
+    width:
+      right -
+      left,
+
+    height:
+      bottom -
+      top,
+
+    viewportWidth:
+      window.innerWidth,
+
+    viewportHeight:
+      window.innerHeight
+  };
+}
+
+
+/*
+  ============================================================
+  6. Extract text from the selected area
+  ------------------------------------------------------------
+  This is the main fix.
+
+  The old version examined every element, including parent
+  elements and their children. That caused the same text to
+  be collected many times.
+
+  The new version:
+    - Ignores the Snapshot overlay.
+    - Ignores hidden elements.
+    - Uses only visible text-bearing elements.
+    - Skips elements that contain another suitable text
+      element.
+    - Keeps only text that overlaps the selected rectangle.
+    - Removes duplicate text.
+    - Does not copy anything to the clipboard.
+  ============================================================
+*/
+
+function extractTextFromArea(
+  selection
+) {
+  const selectedParts =
+    [];
+
+  const elements =
+    document.querySelectorAll(
+      "body *"
+    );
+
+  elements.forEach(
+    (element) => {
+      if (
+        shouldIgnoreElement(
+          element
+        )
+      ) {
+        return;
+      }
+
+      const rect =
+        element.getBoundingClientRect();
+
+      if (
+        !isVisibleElement(
+          element,
+          rect
+        )
+      ) {
+        return;
+      }
+
+      if (
+        !rectOverlapsSelection(
+          rect,
+          selection
+        )
+      ) {
+        return;
+      }
+
+      /*
+        If this element contains another visible text element,
+        use the smaller text element instead of collecting the
+        entire parent block.
+      */
+      if (
+        containsTextChild(
+          element
+        )
+      ) {
+        return;
+      }
+
+      const text =
+        getElementText(
+          element
+        );
+
+      if (
+        !text
+      ) {
+        return;
+      }
+
+      selectedParts.push(
+        text
+      );
+    }
+  );
+
+  return [
+    ...new Set(
+      selectedParts
+    )
+  ].join(
+    "\n"
+  );
+}
+
+
+/*
+  ============================================================
+  7. Decide which elements should be ignored
+  ------------------------------------------------------------
+  We ignore scripts, styles, metadata, form controls, and the
+  extension's own overlay.
+  ============================================================
+*/
+
+function shouldIgnoreElement(
+  element
+) {
+  const ignoredTags = [
+    "SCRIPT",
+    "STYLE",
+    "NOSCRIPT",
+    "TEMPLATE",
+    "SVG",
+    "CANVAS",
+    "INPUT",
+    "TEXTAREA",
+    "SELECT",
+    "OPTION"
+  ];
+
+  if (
+    ignoredTags.includes(
+      element.tagName
+    )
+  ) {
+    return true;
+  }
+
+  if (
+    element.closest(
+      "#__qr_snapshot_overlay__"
+    )
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+
+/*
+  ============================================================
+  8. Check whether an element is visible
+  ------------------------------------------------------------
+  getBoundingClientRect() provides viewport coordinates.
+  We also check display, visibility, opacity, and dimensions.
+  ============================================================
+*/
+
+function isVisibleElement(
+  element,
+  rect
+) {
+  const styles =
+    window.getComputedStyle(
+      element
+    );
+
+  if (
+    styles.display ===
+      "none" ||
+    styles.visibility ===
+      "hidden" ||
+    Number(
+      styles.opacity
+    ) ===
+      0
+  ) {
+    return false;
+  }
+
+  if (
+    rect.width <=
+      0 ||
+    rect.height <=
+      0
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+
+/*
+  ============================================================
+  9. Check rectangle overlap
+  ------------------------------------------------------------
+  Returns true when the webpage element and the selected
+  rectangle share any visible area.
+  ============================================================
+*/
+
+function rectOverlapsSelection(
+  rect,
+  selection
+) {
+  return (
+    rect.right >
+      selection.left &&
+    rect.left <
+      selection.left +
+        selection.width &&
+    rect.bottom >
+      selection.top &&
+    rect.top <
+      selection.top +
+        selection.height
+  );
+}
+
+
+/*
+  ============================================================
+  10. Avoid parent-element duplicates
+  ------------------------------------------------------------
+  A parent such as <div> may contain a heading, paragraph,
+  email, and address. We skip that parent when it contains
+  another visible text-bearing element.
+
+  This makes the extracted text much smaller and cleaner.
+  ============================================================
+*/
+
+function containsTextChild(
+  element
+) {
+  const children =
+    element.querySelectorAll(
+      ":scope > *"
+    );
+
+  for (
+    const child of children
+  ) {
+    if (
+      shouldIgnoreElement(
+        child
+      )
+    ) {
+      continue;
+    }
+
+    const rect =
+      child.getBoundingClientRect();
+
+    if (
+      !isVisibleElement(
+        child,
+        rect
+      )
+    ) {
+      continue;
+    }
+
+    const childText =
+      getElementText(
+        child
+      );
+
+    if (
+      childText
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+
+/*
+  ============================================================
+  11. Read and normalize visible text
+  ------------------------------------------------------------
+  innerText represents rendered text more closely than
+  textContent, so it is preferable for webpage Snapshot data.
+  ============================================================
+*/
+
+function getElementText(
+  element
+) {
+  const text =
+    element.innerText ||
+    "";
+
+  const cleanText =
+    text
+      .replace(
+        /\s+/g,
+        " "
+      )
+      .trim();
+
+  if (
+    !cleanText ||
+    cleanText.length >
+      500
+  ) {
+    return "";
+  }
+
+  return cleanText;
+}
+
+
+/*
+  ============================================================
+  12. Keyboard cancellation
+  ------------------------------------------------------------
+  Pressing Escape cancels Snapshot mode and removes the
+  overlay without sending any data.
+  ============================================================
+*/
+
+function handleSelectionEscape(
+  event
+) {
+  if (
+    event.key ===
+    "Escape"
+  ) {
+    cancelSnapshotSelection();
+  }
+}
+
+function cancelSnapshotSelection() {
+  removeSelectionOverlay();
+}
+
+function removeSelectionOverlay() {
+  if (
+    selectionOverlay
+  ) {
+    selectionOverlay.remove();
+  }
+
+  selectionOverlay =
+    null;
+
+  selectionBox =
+    null;
+
+  selectionActive =
+    false;
+
+  document.removeEventListener(
+    "keydown",
+    handleSelectionEscape,
+    true
+  );
+}
+
+
+/*
+  ============================================================
+  13. Compatibility helper
+  ------------------------------------------------------------
+  Some older code may send START_SELECTION. This helper keeps
+  that message working by starting the same Snapshot tool.
+  ============================================================
+*/
+
+function startSelection() {
+  startSnapshotSelection();
+}
+
+
+/*
+  ============================================================
+  14. Scan status messages
+  ------------------------------------------------------------
+  Removes the temporary scan status created by another part
+  of the extension.
+  ============================================================
+*/
+
+function removeScanStatus() {
+  const status =
+    document.getElementById(
+      "__qr_selection_result__"
+    );
+
+  if (
+    status
+  ) {
+    status.remove();
+  }
+}
+
+
+/*
+  ============================================================
+  15. Payment result message
+  ------------------------------------------------------------
+  Displays the result of a QR/payment scan on the webpage.
+
+  This section is separate from Snapshot text extraction and
+  does not copy Snapshot webpage text.
+  ============================================================
+*/
+
+function showPaymentResult(
+  result
+) {
+  selectionActive =
+    false;
+
+  if (
+    !result ||
+    !result.ok
+  ) {
+    showMessage(
+      "Address not found",
+      result?.error ||
+        "No supported recipient address was found.",
+      "error"
+    );
+
+    return;
+  }
+
+  showMessage(
+    `${result.network} address copied`,
+    result.address ||
+      "Payment details copied.",
+    "success"
+  );
+}
+
+
+/*
+  ============================================================
+  16. Display a temporary webpage message
+  ------------------------------------------------------------
+  Creates a small notification on the webpage.
+
+  This does not copy any webpage text.
+  ============================================================
+*/
+
+function showMessage(
+  title,
+  text,
+  type
+) {
+  const oldMessage =
+    document.getElementById(
+      "__qr_payment_message__"
+    );
+
+  if (
+    oldMessage
+  ) {
+    oldMessage.remove();
+  }
+
+  const message =
+    document.createElement(
+      "div"
+    );
+
+  const titleElement =
+    document.createElement(
+      "strong"
+    );
+
+  const textElement =
+    document.createElement(
+      "span"
+    );
+
+  message.id =
+    "__qr_payment_message__";
+
+  message.style.position =
+    "fixed";
+
+  message.style.right =
+    "20px";
+
+  message.style.bottom =
+    "20px";
+
+  message.style.zIndex =
+    "2147483647";
+
+  message.style.maxWidth =
+    "360px";
+
+  message.style.padding =
+    "12px 14px";
+
+  message.style.borderRadius =
+    "8px";
+
+  message.style.fontFamily =
+    "Arial, sans-serif";
+
+  message.style.fontSize =
+    "13px";
+
+  message.style.lineHeight =
+    "1.4";
+
+  message.style.color =
+    "#ffffff";
+
+  message.style.boxShadow =
+    "0 4px 14px rgba(0, 0, 0, 0.25)";
+
+  if (
+    type ===
+    "error"
+  ) {
+    message.style.background =
+      "#b42318";
+  } else if (
+    type ===
+    "success"
+  ) {
+    message.style.background =
+      "#087f5b";
+  } else {
+    message.style.background =
+      "#344054";
+  }
+
+  titleElement.textContent =
+    title;
+
+  textElement.textContent =
+    ` ${text}`;
+
+  message.appendChild(
+    titleElement
+  );
+
+  message.appendChild(
+    textElement
+  );
+
+  document.documentElement.appendChild(
+    message
+  );
+
+  setTimeout(
+    () => {
+      message.remove();
+    },
+    3500
+  );
+}
