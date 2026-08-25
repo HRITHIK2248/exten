@@ -455,3 +455,14 @@ h1 {
   font-size: 11px;
   line-height: 1.4;
 }
+.contact-section {
+  margin-bottom: 16px;
+}
+
+.contact-section .copy-value-row {
+  align-items: flex-start;
+}
+
+.contact-section .address {
+  white-space: pre-wrap;
+}

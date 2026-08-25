@@ -2227,7 +2227,96 @@ function extractRecipient(
       payload
     );
   }
+  
+  if (
+    /^https?:\/\//i.test(
+      payload
+    )
+  ) {
+    return {
+      ok: true,
+      type: "website",
+      network: "Website",
+      address: payload,
+      copiedAutomatically: false
+    };
+  }
+  
+  if (
+    /^mailto:/i.test(
+      payload
+    )
+  ) {
+    return {
+      ok: true,
+      type: "email",
+      network: "Email",
+      address:
+        payload
+          .replace(
+            /^mailto:/i,
+            ""
+          )
+          .split(
+            "?"
+          )[0]
+          .trim(),
+      copiedAutomatically: false
+    };
+  }
+  
+  if (
+    /^MATMSG:/i.test(
+      payload
+    )
+  ) {
+    return parseMatmsgPayload(
+      payload
+    );
+  }
+  
+  if (
+    /^tel:/i.test(
+      payload
+    )
+  ) {
+    return extractPhoneRecipient(
+      payload
+    );
+  }
+  
+  if (
+    /^sms:/i.test(
+      payload
+    )
+  ) {
+    return extractSmsRecipient(
+      payload
+    );
+  }
 
+  if (
+    /^smsto:/i.test(
+      payload
+    )
+  ) {
+    return extractSmsRecipient(
+      payload
+    );
+  }
+  
+  if (
+    /^BEGIN:VCARD/i.test(
+      payload.trim()
+    ) &&
+    /END:VCARD/i.test(
+      payload.trim()
+    )
+  ) {
+    return parseVcardPayload(
+      payload
+    );
+  }
   if (
     /^ln[a-z0-9]+$/i.test(
       payload
@@ -2570,6 +2659,103 @@ function parseTlvFields(
   };
 }
 
+/*
+  ============================================================
+  Parse MATMSG email QR payload
+  ------------------------------------------------------------
+  Reads MATMSG payloads containing TO, SUB, and BODY fields.
+
+  Example:
+    MATMSG:TO:person@example.com;SUB:Subject;BODY:Message;;
+
+  Returns normalized email data for popup rendering.
+  ============================================================
+*/
+function parseMatmsgPayload(
+  payload
+) {
+  const value =
+    payload
+      .trim()
+      .replace(
+        /^MATMSG:/i,
+        ""
+      );
+
+  const fields =
+    {};
+
+  const parts =
+    value.split(
+      ";"
+    );
+
+  parts.forEach(
+    (part) => {
+      const separator =
+        part.indexOf(
+          ":"
+        );
+
+      if (
+        separator ===
+        -1
+      ) {
+        return;
+      }
+
+      const key =
+        part
+          .slice(
+            0,
+            separator
+          )
+          .trim()
+          .toUpperCase();
+
+      const fieldValue =
+        part
+          .slice(
+            separator + 1
+          )
+          .trim();
+
+      fields[key] =
+        fieldValue;
+    }
+  );
+
+  const to =
+    fields.TO ||
+    "";
+
+  if (
+    !to
+  ) {
+    return {
+      ok: false,
+      error:
+        "MATMSG email recipient was not found."
+    };
+  }
+
+  return {
+    ok: true,
+    type: "email",
+    network: "Email",
+    address: to,
+    emailFormat: "MATMSG",
+    emailTo: to,
+    emailSubject:
+      fields.SUB ||
+      "",
+    emailBody:
+      fields.BODY ||
+      "",
+    copiedAutomatically: false
+  };
+}
+
 function getNestedValue(
   payload,
   wantedTag
@@ -2874,6 +3060,535 @@ function extractSolanaRecipient(
       ) || "",
     copiedAutomatically: false
   };
+}
+/*
+  ============================================================
+  Parse SMS QR payload
+  ------------------------------------------------------------
+  Reads sms: and smsto: QR payloads containing a phone number
+  and an optional pre-filled message.
+
+  Supported examples:
+    sms:+919876543210?body=Hello
+    smsto:+919876543210:Hello
+
+  The message is displayed as a draft only. The extension does
+  not send SMS messages automatically.
+  ============================================================
+*/
+function extractSmsRecipient(
+  payload
+) {
+  const rawValue =
+    payload
+      .trim()
+      .replace(
+        /^sms(?:to)?:/i,
+        ""
+      );
+
+  let phone =
+    "";
+
+  let message =
+    "";
+
+  if (
+    /^sms:/i.test(
+      payload
+    )
+  ) {
+    const questionIndex =
+      rawValue.indexOf(
+        "?"
+      );
+
+    const phonePart =
+      questionIndex ===
+        -1
+        ? rawValue
+        : rawValue.slice(
+            0,
+            questionIndex
+          );
+
+    const queryPart =
+      questionIndex ===
+        -1
+        ? ""
+        : rawValue.slice(
+            questionIndex + 1
+          );
+
+    const parameters =
+      new URLSearchParams(
+        queryPart
+      );
+
+    phone =
+      phonePart.trim();
+
+    message =
+      parameters.get(
+        "body"
+      ) ||
+      "";
+  } else {
+    const separatorIndex =
+      rawValue.indexOf(
+        ":"
+      );
+
+    if (
+      separatorIndex ===
+      -1
+    ) {
+      phone =
+        rawValue.trim();
+    } else {
+      phone =
+        rawValue
+          .slice(
+            0,
+            separatorIndex
+          )
+          .trim();
+
+      message =
+        rawValue
+          .slice(
+            separatorIndex + 1
+          )
+          .trim();
+    }
+  }
+
+  if (
+    !phone
+  ) {
+    return {
+      ok: false,
+      error:
+        "SMS recipient phone number was not found."
+    };
+  }
+
+  const phoneResult =
+    parsePhoneNumberForResult(
+      phone
+    );
+
+  return {
+    ok: true,
+    type: "sms",
+    network: "SMS",
+    address: phone,
+    formattedNumber:
+      phoneResult.formattedNumber,
+    internationalNumber:
+      phoneResult.internationalNumber,
+    nationalNumber:
+      phoneResult.nationalNumber,
+    country:
+      phoneResult.country,
+    countryCallingCode:
+      phoneResult.countryCallingCode,
+    isValid:
+      phoneResult.isValid,
+    validationStatus:
+      phoneResult.validationStatus,
+    message,
+    copiedAutomatically: false
+  };
+}
+
+/*
+  ============================================================
+  Parse telephone QR payload
+  ------------------------------------------------------------
+  Reads tel: QR payloads, formats the phone number, identifies
+  the country, and checks whether the number has a valid
+  country-specific structure.
+
+  The validation is structural only. It does not confirm that
+  the number is active or belongs to a particular person.
+  ============================================================
+*/
+function extractPhoneRecipient(
+  payload
+) {
+  const value =
+    payload
+      .trim()
+      .replace(
+        /^tel:/i,
+        ""
+      );
+
+  const rawNumber =
+    value
+      .split(
+        ";"
+      )[0]
+      .trim();
+
+  if (
+    !rawNumber
+  ) {
+    return {
+      ok: false,
+      error:
+        "Phone number was not found."
+    };
+  }
+
+  const parsed =
+    parsePhoneNumberForResult(
+      rawNumber
+    );
+
+  return {
+    ok: true,
+    type: "phone",
+    network: "Telephone",
+    address: rawNumber,
+    formattedNumber:
+      parsed.formattedNumber,
+    internationalNumber:
+      parsed.internationalNumber,
+    nationalNumber:
+      parsed.nationalNumber,
+    country:
+      parsed.country,
+    countryCallingCode:
+      parsed.countryCallingCode,
+    isValid:
+      parsed.isValid,
+    validationStatus:
+      parsed.validationStatus,
+    copiedAutomatically: false
+  };
+}
+
+function parsePhoneNumberForResult(
+  rawNumber
+) {
+  const fallback =
+    {
+      formattedNumber:
+        rawNumber,
+      internationalNumber:
+        rawNumber,
+      nationalNumber:
+        rawNumber,
+      country:
+        "Unknown",
+      countryCallingCode:
+        "",
+      isValid:
+        false,
+      validationStatus:
+        "Could not validate"
+    };
+
+  if (
+    typeof libphonenumber ===
+    "undefined"
+  ) {
+    return fallback;
+  }
+
+  try {
+    const parsed =
+      libphonenumber
+        .parsePhoneNumberFromString(
+          rawNumber
+        );
+
+    if (
+      !parsed
+    ) {
+      return fallback;
+    }
+
+    const isValid =
+      parsed.isValid();
+
+    return {
+      formattedNumber:
+        isValid
+          ? parsed.formatInternational()
+          : rawNumber,
+
+      internationalNumber:
+        parsed.number ||
+        rawNumber,
+
+      nationalNumber:
+        isValid
+          ? parsed.formatNational()
+          : rawNumber,
+
+      country:
+        parsed.country ||
+        "Unknown",
+
+      countryCallingCode:
+        parsed.countryCallingCode
+          ? `+${parsed.countryCallingCode}`
+          : "",
+
+      isValid,
+
+      validationStatus:
+        isValid
+          ? "Structurally valid"
+          : "Invalid phone number"
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+/*
+  ============================================================
+  Parse vCard contact QR payload
+  ------------------------------------------------------------
+  Reads vCard contact fields such as FN, ORG, TITLE, TEL,
+  EMAIL, ADR, URL, and NOTE.
+
+  Example:
+    BEGIN:VCARD
+    VERSION:3.0
+    FN:Jane Smith
+    TEL:+919876543210
+    EMAIL:jane@example.com
+    END:VCARD
+  ============================================================
+*/
+function parseVcardPayload(
+  payload
+) {
+  const normalized =
+    payload
+      .replace(
+        /\r\n[ \t]/g,
+        ""
+      )
+      .replace(
+        /\n[ \t]/g,
+        ""
+      );
+
+  const lines =
+    normalized.split(
+      /\r?\n/
+    );
+
+  const contact = {
+    name: "",
+    organization: "",
+    title: "",
+    phones: [],
+    emails: [],
+    address: "",
+    website: "",
+    note: ""
+  };
+
+  lines.forEach(
+    (line) => {
+      const separator =
+        line.indexOf(
+          ":"
+        );
+
+      if (
+        separator ===
+        -1
+      ) {
+        return;
+      }
+
+      const property =
+        line
+          .slice(
+            0,
+            separator
+          )
+          .split(
+            ";"
+          )[0]
+          .trim()
+          .toUpperCase();
+
+      const value =
+        unescapeVcardValue(
+          line.slice(
+            separator + 1
+          )
+        );
+
+      if (
+        !value
+      ) {
+        return;
+      }
+
+      if (
+        property ===
+        "FN"
+      ) {
+        contact.name =
+          value;
+      } else if (
+        property ===
+        "ORG"
+      ) {
+        contact.organization =
+          value;
+      } else if (
+        property ===
+        "TITLE"
+      ) {
+        contact.title =
+          value;
+      } else if (
+        property ===
+        "TEL"
+      ) {
+        contact.phones.push(
+          value
+        );
+      } else if (
+        property ===
+        "EMAIL"
+      ) {
+        contact.emails.push(
+          value
+        );
+      } else if (
+        property ===
+        "ADR"
+      ) {
+        contact.address =
+          formatVcardAddress(
+            value
+          );
+      } else if (
+        property ===
+        "URL"
+      ) {
+        contact.website =
+          value;
+      } else if (
+        property ===
+        "NOTE"
+      ) {
+        contact.note =
+          value;
+      }
+    }
+  );
+
+  contact.phones =
+    uniquePayloadValues(
+      contact.phones
+    );
+
+  contact.emails =
+    uniquePayloadValues(
+      contact.emails
+    );
+
+  if (
+    !contact.name &&
+    contact.phones.length ===
+      0 &&
+    contact.emails.length ===
+      0
+  ) {
+    return {
+      ok: false,
+      error:
+        "Contact QR was detected, but no contact information was found."
+    };
+  }
+
+  return {
+    ok: true,
+    type: "contact",
+    network: "vCard",
+    contactName:
+      contact.name,
+    contactOrganization:
+      contact.organization,
+    contactTitle:
+      contact.title,
+    contactPhones:
+      contact.phones,
+    contactEmails:
+      contact.emails,
+    contactAddress:
+      contact.address,
+    contactWebsite:
+      contact.website,
+    contactNote:
+      contact.note,
+    copiedAutomatically: false
+  };
+}
+function unescapeVcardValue(
+  value
+) {
+  return value
+    .replace(
+      /\\n/gi,
+      "\n"
+    )
+    .replace(
+      /\\,/g,
+      ","
+    )
+    .replace(
+      /\\;/g,
+      ";"
+    )
+    .replace(
+      /\\\\/g,
+      "\\"
+    )
+    .trim();
+}
+
+function formatVcardAddress(
+  value
+) {
+  const parts =
+    value.split(
+      ";"
+    );
+
+  return parts
+    .filter(
+      Boolean
+    )
+    .join(
+      ", "
+    )
+    .trim();
+}
+
+function uniquePayloadValues(
+  values
+) {
+  return [
+    ...new Set(
+      values.filter(
+        Boolean
+      )
+    )
+  ];
 }
 
 function extractSchemeAddress(

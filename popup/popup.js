@@ -61,7 +61,143 @@ const copyStatus =
   document.getElementById(
     "copyStatus"
   );
+const phoneDetails =
+  document.getElementById(
+    "phoneDetails"
+  );
 
+const phoneFormattedNumber =
+  document.getElementById(
+    "phoneFormattedNumber"
+  );
+
+const phoneCountry =
+  document.getElementById(
+    "phoneCountry"
+  );
+
+const phoneCountryCallingCode =
+  document.getElementById(
+    "phoneCountryCallingCode"
+  );
+
+const phoneValidationStatus =
+  document.getElementById(
+    "phoneValidationStatus"
+  );
+const smsDetails =
+  document.getElementById(
+    "smsDetails"
+  );
+
+const smsRecipient =
+  document.getElementById(
+    "smsRecipient"
+  );
+
+const smsMessage =
+  document.getElementById(
+    "smsMessage"
+  );
+
+const smsMessageField =
+  document.getElementById(
+    "smsMessageField"
+  );
+
+const copySmsRecipientButton =
+  document.getElementById(
+    "copySmsRecipientButton"
+  );
+
+const copySmsMessageButton =
+  document.getElementById(
+    "copySmsMessageButton"
+  );  
+const contactSection =
+  document.getElementById(
+    "contactSection"
+  );
+
+const contactNameField =
+  document.getElementById(
+    "contactNameField"
+  );
+
+const contactOrganizationField =
+  document.getElementById(
+    "contactOrganizationField"
+  );
+
+const contactTitleField =
+  document.getElementById(
+    "contactTitleField"
+  );
+
+const contactPhonesField =
+  document.getElementById(
+    "contactPhonesField"
+  );
+
+const contactEmailsField =
+  document.getElementById(
+    "contactEmailsField"
+  );
+
+const contactAddressField =
+  document.getElementById(
+    "contactAddressField"
+  );
+
+const contactWebsiteField =
+  document.getElementById(
+    "contactWebsiteField"
+  );
+
+const contactNoteField =
+  document.getElementById(
+    "contactNoteField"
+  );
+
+const contactName =
+  document.getElementById(
+    "contactName"
+  );
+
+const contactOrganization =
+  document.getElementById(
+    "contactOrganization"
+  );
+
+const contactTitle =
+  document.getElementById(
+    "contactTitle"
+  );
+
+const contactPhones =
+  document.getElementById(
+    "contactPhones"
+  );
+
+const contactEmails =
+  document.getElementById(
+    "contactEmails"
+  );
+
+const contactAddress =
+  document.getElementById(
+    "contactAddress"
+  );
+
+const contactWebsite =
+  document.getElementById(
+    "contactWebsite"
+  );
+
+const contactNote =
+  document.getElementById(
+    "contactNote"
+  );  
 
 /*
   ============================================================
@@ -900,6 +1036,41 @@ async function openWebsiteUrl() {
 }
 
 
+
+
+async function copySmsRecipient() {
+  if (
+    !latestResult ||
+    latestResult.type !==
+    "sms"
+  ) {
+    return;
+  }
+
+  await copyText(
+    latestResult.formattedNumber ||
+      latestResult.address,
+    "SMS recipient copied."
+  );
+}
+
+async function copySmsMessage() {
+  if (
+    !latestResult ||
+    latestResult.type !==
+    "sms" ||
+    !latestResult.message
+  ) {
+    return;
+  }
+
+  await copyText(
+    latestResult.message,
+    "SMS message copied."
+  );
+}
+
+
 /*
   ============================================================
   20. Copy email fields
@@ -1142,7 +1313,9 @@ function renderResult(
   renderEmailResult(
     result
   );
-
+  renderContactResult(
+    result
+  );
   if (
     result.type ===
     "snapshot"
@@ -1191,9 +1364,55 @@ function renderResult(
   renderQrisFields(
     result
   );
+  
+  renderPhoneDetails(
+    result
+  );
+  renderSmsDetails(
+    result
+  );
+  
+  if (
+    result.type ===
+      "website" ||
+    result.type ===
+      "phone" ||
+    result.type ===
+      "sms" ||
+    result.type ===
+      "contact"
+  ) {
+    addressSection.classList.toggle(
+      "hidden",
+      result.type ===
+        "website" ||
+        result.type ===
+        "sms" ||
+        result.type ===
+        "contact"
+    );
+    pixSection.classList.add(
+      "hidden"
+    );
+
+    qrisSection.classList.add(
+      "hidden"
+    );
+
+    details.innerHTML =
+      "";
+
+    copyStatus.textContent =
+      "";
+
+    renderAddressField(
+      result
+    );
+
+    return;
+  }
 
   renderAddressField(
-    result
   );
 
   renderDetails(
@@ -1336,7 +1555,146 @@ function resetWebsiteDisplay() {
   );
 }
 
+/*
+  ============================================================
+  Render vCard contact QR
+  ------------------------------------------------------------
+  Displays contact name, organization, title, phone numbers,
+  email addresses, postal address, website, and note.
+  ============================================================
+*/
+function renderContactResult(
+  result
+) {
+  resetContactDisplay();
 
+  if (
+    !result ||
+    result.type !==
+    "contact"
+  ) {
+    return;
+  }
+
+  contactSection.classList.remove(
+    "hidden"
+  );
+
+  renderContactField(
+    contactNameField,
+    contactName,
+    result.contactName
+  );
+
+  renderContactField(
+    contactOrganizationField,
+    contactOrganization,
+    result.contactOrganization
+  );
+
+  renderContactField(
+    contactTitleField,
+    contactTitle,
+    result.contactTitle
+  );
+
+  renderContactField(
+    contactPhonesField,
+    contactPhones,
+    (
+      result.contactPhones ||
+      []
+    ).join(
+      "\n"
+    )
+  );
+
+  renderContactField(
+    contactEmailsField,
+    contactEmails,
+    (
+      result.contactEmails ||
+      []
+    ).join(
+      "\n"
+    )
+  );
+
+  renderContactField(
+    contactAddressField,
+    contactAddress,
+    result.contactAddress
+  );
+
+  renderContactField(
+    contactWebsiteField,
+    contactWebsite,
+    result.contactWebsite
+  );
+
+  renderContactField(
+    contactNoteField,
+    contactNote,
+    result.contactNote
+  );
+}
+
+function renderContactField(
+  field,
+  element,
+  value
+) {
+  const text =
+    value ||
+    "";
+
+  element.textContent =
+    text;
+
+  field.classList.toggle(
+    "hidden",
+    !text
+  );
+}
+
+function resetContactDisplay() {
+  contactSection.classList.add(
+    "hidden"
+  );
+
+  [
+    contactNameField,
+    contactOrganizationField,
+    contactTitleField,
+    contactPhonesField,
+    contactEmailsField,
+    contactAddressField,
+    contactWebsiteField,
+    contactNoteField
+  ].forEach(
+    (field) => {
+      field.classList.add(
+        "hidden"
+      );
+    }
+  );
+
+  [
+    contactName,
+    contactOrganization,
+    contactTitle,
+    contactPhones,
+    contactEmails,
+    contactAddress,
+    contactWebsite,
+    contactNote
+  ].forEach(
+    (element) => {
+      element.textContent =
+        "";
+    }
+  );
+}
 /*
   ============================================================
   26. Render email QR
@@ -1352,14 +1710,34 @@ function renderEmailResult(
 
   if (
     !result ||
-    !result.rawPayload ||
+    !result.rawPayload
+  ) {
+    return;
+  }
+  
+  const rawPayload =
+    result.rawPayload.trim();
+
+  if (
+    /^MATMSG:/i.test(
+      rawPayload
+    )
+  ) {
+    renderMatmsgEmail(
+      rawPayload
+    );
+
+    return;
+  }
+
+  if (
     !/^mailto:/i.test(
-      result.rawPayload.trim()
+      rawPayload
     )
   ) {
     return;
   }
-
+  
   const rawValue =
     result.rawPayload
       .trim()
@@ -1447,6 +1825,127 @@ function renderEmailResult(
   emailQrBccField.classList.toggle(
     "hidden",
     !bcc
+  );
+
+  emailQrSubjectField.classList.toggle(
+    "hidden",
+    !subject
+  );
+
+  emailQrBodyField.classList.toggle(
+    "hidden",
+    !body
+  );
+}
+
+/*
+  ============================================================
+  Render MATMSG email QR
+  ------------------------------------------------------------
+  Reads the MATMSG payload and displays the recipient,
+  subject, and message in the email QR section.
+
+  MATMSG does not normally provide separate CC or BCC fields,
+  so those fields remain hidden.
+  ============================================================
+*/
+
+function renderMatmsgEmail(
+  payload
+) {
+  const value =
+    payload
+      .trim()
+      .replace(
+        /^MATMSG:/i,
+        ""
+      );
+
+  const fields =
+    {};
+
+  value
+    .split(
+      ";"
+    )
+    .forEach(
+      (part) => {
+        const separator =
+          part.indexOf(
+            ":"
+          );
+
+        if (
+          separator ===
+          -1
+        ) {
+          return;
+        }
+
+        const key =
+          part
+            .slice(
+              0,
+              separator
+            )
+            .trim()
+            .toUpperCase();
+
+        const fieldValue =
+          part
+            .slice(
+              separator + 1
+            )
+            .trim();
+
+        fields[key] =
+          fieldValue;
+      }
+    );
+
+  const to =
+    fields.TO ||
+    "";
+
+  const subject =
+    fields.SUB ||
+    "";
+
+  const body =
+    fields.BODY ||
+    "";
+
+  if (
+    !to
+  ) {
+    return;
+  }
+
+  emailQrTo.textContent =
+    to;
+
+  emailQrCc.textContent =
+    "";
+
+  emailQrBcc.textContent =
+    "";
+
+  emailQrSubject.textContent =
+    subject;
+
+  emailQrBody.textContent =
+    body;
+
+  emailQrSection.classList.remove(
+    "hidden"
+  );
+
+  emailQrCcField.classList.add(
+    "hidden"
+  );
+
+  emailQrBccField.classList.add(
+    "hidden"
   );
 
   emailQrSubjectField.classList.toggle(
@@ -2090,11 +2589,129 @@ function renderQrisFields(
     "";
 }
 
+/*
+  ============================================================
+  Render SMS QR details
+  ------------------------------------------------------------
+  Displays the SMS recipient, formatted number, country
+  information, validation status, and optional message.
+  ============================================================
+*/
+function renderSmsDetails(
+  result
+) {
+  if (
+    !result ||
+    result.type !==
+    "sms"
+  ) {
+    smsDetails.classList.add(
+      "hidden"
+    );
+
+    smsRecipient.textContent =
+      "";
+
+    smsMessage.textContent =
+      "";
+
+    smsMessageField.classList.add(
+      "hidden"
+    );
+
+    return;
+  }
+
+  smsDetails.classList.remove(
+    "hidden"
+  );
+
+  smsRecipient.textContent =
+    result.formattedNumber ||
+    result.address ||
+    "";
+
+  smsMessage.textContent =
+    result.message ||
+    "";
+
+  smsMessageField.classList.toggle(
+    "hidden",
+    !result.message
+  );
+}
+/*
+  ============================================================
+  Render telephone QR details
+  ------------------------------------------------------------
+  Displays the formatted phone number, country, calling code,
+  and structural validation result.
+  ============================================================
+*/
+function renderPhoneDetails(
+  result
+) {
+  if (
+    !result ||
+    result.type !==
+    "phone"
+  ) {
+    phoneDetails.classList.add(
+      "hidden"
+    );
+
+    phoneFormattedNumber.textContent =
+      "";
+
+    phoneCountry.textContent =
+      "";
+
+    phoneCountryCallingCode.textContent =
+      "";
+
+    phoneValidationStatus.textContent =
+      "";
+
+    return;
+  }
+
+  phoneDetails.classList.remove(
+    "hidden"
+  );
+
+  phoneFormattedNumber.textContent =
+    result.formattedNumber ||
+    result.address ||
+    "";
+
+  phoneCountry.textContent =
+    result.country ||
+    "Unknown";
+
+  phoneCountryCallingCode.textContent =
+    result.countryCallingCode ||
+    "Unknown";
+
+  phoneValidationStatus.textContent =
+    result.validationStatus ||
+    "Could not validate";
+}
 function renderAddressField(
   result
 ) {
   resetUpiPhoneDisplay();
+  
+  if (
+    result.type ===
+    "website"
+  ) {
+    addressSection.classList.add(
+      "hidden"
+    );
 
+    return;
+  }
+  
   if (
     result.type ===
       "pix" ||
@@ -2112,11 +2729,22 @@ function renderAddressField(
     "hidden"
   );
 
-  addressLabel.textContent =
+  if (
     result.type ===
-      "upi"
-      ? "UPI ID"
-      : "ID or address";
+    "upi"
+  ) {
+    addressLabel.textContent =
+      "UPI ID";
+  } else if (
+    result.type ===
+    "phone"
+  ) {
+    addressLabel.textContent =
+      "Phone number";
+  } else {
+    addressLabel.textContent =
+      "ID or address";
+  }
 
   resultAddress.textContent =
     result.address ||
@@ -2381,6 +3009,10 @@ function resetAllSections() {
   resetWebsiteDisplay();
   resetEmailDisplay();
   resetSnapshotVisibility();
+  resetContactDisplay();
+  renderPhoneDetails(
+    null
+  );
 }
 
 
@@ -2427,7 +3059,34 @@ function getResultType(
   ) {
     return "Email QR";
   }
-
+  if (
+    result.type ===
+    "website"
+  ) {
+    return "Website QR";
+  }
+  
+  if (
+    result.type ===
+    "phone"
+  ) {
+    return "Phone number";
+  }
+  
+  if (
+    result.type ===
+    "sms"
+  ) {
+    return "SMS message";
+  }
+  
+  if (
+    result.type ===
+    "contact"
+  ) {
+    return "Contact QR";
+  }
+  
   return "Payment data";
 }
 

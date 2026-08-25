@@ -318,7 +318,207 @@
             </div>
           </div>
         </section>
-
+                <!-- Contact QR information --> 
+        <section 
+          id="contactSection" 
+          class="contact-section hidden"
+        > 
+          <div class="image-title"> 
+            Contact QR information 
+          </div> 
+ 
+          <div 
+            id="contactNameField" 
+            class="copy-field hidden"
+          > 
+            <span class="label"> 
+              Name 
+            </span> 
+ 
+            <div class="copy-value-row"> 
+              <code 
+                id="contactName" 
+                class="address" 
+              ></code> 
+ 
+              <button 
+                id="copyContactNameButton" 
+                class="copy-button" 
+                type="button" 
+              > 
+                Copy 
+              </button> 
+            </div> 
+          </div> 
+ 
+          <div 
+            id="contactOrganizationField" 
+            class="copy-field hidden"
+          > 
+            <span class="label"> 
+              Organization 
+            </span> 
+ 
+            <div class="copy-value-row"> 
+              <code 
+                id="contactOrganization" 
+                class="address" 
+              ></code> 
+ 
+              <button 
+                id="copyContactOrganizationButton" 
+                class="copy-button" 
+                type="button" 
+              > 
+                Copy 
+              </button> 
+            </div> 
+          </div> 
+ 
+          <div 
+            id="contactTitleField" 
+            class="copy-field hidden"
+          > 
+            <span class="label"> 
+              Job title 
+            </span> 
+ 
+            <div class="copy-value-row"> 
+              <code 
+                id="contactTitle" 
+                class="address" 
+              ></code> 
+ 
+              <button 
+                id="copyContactTitleButton" 
+                class="copy-button" 
+                type="button" 
+              > 
+                Copy 
+              </button> 
+            </div> 
+          </div> 
+ 
+          <div 
+            id="contactPhonesField" 
+            class="copy-field hidden"
+          > 
+            <span class="label"> 
+              Phone number 
+            </span> 
+ 
+            <div class="copy-value-row"> 
+              <code 
+                id="contactPhones" 
+                class="address" 
+              ></code> 
+ 
+              <button 
+                id="copyContactPhonesButton" 
+                class="copy-button" 
+                type="button" 
+              > 
+                Copy 
+              </button> 
+            </div> 
+          </div> 
+ 
+          <div 
+            id="contactEmailsField" 
+            class="copy-field hidden"
+          > 
+            <span class="label"> 
+              Email address 
+            </span> 
+ 
+            <div class="copy-value-row"> 
+              <code 
+                id="contactEmails" 
+                class="address" 
+              ></code> 
+ 
+              <button 
+                id="copyContactEmailsButton" 
+                class="copy-button" 
+                type="button" 
+              > 
+                Copy 
+              </button> 
+            </div> 
+          </div> 
+ 
+          <div 
+            id="contactAddressField" 
+            class="copy-field hidden"
+          > 
+            <span class="label"> 
+              Address 
+            </span> 
+ 
+            <div class="copy-value-row"> 
+              <code 
+                id="contactAddress" 
+                class="address" 
+              ></code> 
+ 
+              <button 
+                id="copyContactAddressButton" 
+                class="copy-button" 
+                type="button" 
+              > 
+                Copy 
+              </button> 
+            </div> 
+          </div> 
+ 
+          <div 
+            id="contactWebsiteField" 
+            class="copy-field hidden"
+          > 
+            <span class="label"> 
+              Website 
+            </span> 
+ 
+            <div class="copy-value-row"> 
+              <code 
+                id="contactWebsite" 
+                class="address" 
+              ></code> 
+ 
+              <button 
+                id="copyContactWebsiteButton" 
+                class="copy-button" 
+                type="button" 
+              > 
+                Copy 
+              </button> 
+            </div> 
+          </div> 
+ 
+          <div 
+            id="contactNoteField" 
+            class="copy-field hidden"
+          > 
+            <span class="label"> 
+              Note 
+            </span> 
+ 
+            <div class="copy-value-row"> 
+              <code 
+                id="contactNote" 
+                class="address" 
+              ></code> 
+ 
+              <button 
+                id="copyContactNoteButton" 
+                class="copy-button" 
+                type="button" 
+              > 
+                Copy 
+              </button> 
+            </div> 
+          </div> 
+        </section>
 
         <!-- QR and Snapshot images -->
         <section
@@ -474,8 +674,105 @@
             ></span>
           </div>
         </div>
-
-
+                <!-- Phone number details --> 
+        <div 
+          id="phoneDetails" 
+          class="phone-details hidden"
+        > 
+          <div class="field"> 
+            <span class="label"> 
+              Formatted number 
+            </span> 
+ 
+            <span 
+              id="phoneFormattedNumber" 
+              class="value" 
+            ></span> 
+          </div> 
+ 
+          <div class="field"> 
+            <span class="label"> 
+              Country 
+            </span> 
+ 
+            <span 
+              id="phoneCountry" 
+              class="value" 
+            ></span> 
+          </div> 
+ 
+          <div class="field"> 
+            <span class="label"> 
+              Country calling code 
+            </span> 
+ 
+            <span 
+              id="phoneCountryCallingCode" 
+              class="value" 
+            ></span> 
+          </div> 
+ 
+          <div class="field"> 
+            <span class="label"> 
+              Validation 
+            </span> 
+ 
+            <span 
+              id="phoneValidationStatus" 
+              class="value" 
+            ></span> 
+          </div> 
+        </div>
+                <div 
+          id="smsDetails" 
+          class="sms-details hidden"
+        > 
+          <div class="copy-field"> 
+            <span class="label"> 
+              SMS recipient 
+            </span> 
+ 
+            <div class="copy-value-row"> 
+              <code 
+                id="smsRecipient" 
+                class="address" 
+              ></code> 
+ 
+              <button 
+                id="copySmsRecipientButton" 
+                class="copy-button" 
+                type="button" 
+              > 
+                Copy 
+              </button> 
+            </div> 
+          </div> 
+ 
+          <div 
+            id="smsMessageField" 
+            class="copy-field hidden"
+          > 
+            <span class="label"> 
+              Message 
+            </span> 
+ 
+            <div class="copy-value-row"> 
+              <code 
+                id="smsMessage" 
+                class="address" 
+              ></code> 
+ 
+              <button 
+                id="copySmsMessageButton" 
+                class="copy-button" 
+                type="button" 
+              > 
+                Copy 
+              </button> 
+            </div> 
+          </div> 
+        </div>
+        
         <!-- UPI ID or cryptocurrency address -->
         <div
           id="addressSection"
