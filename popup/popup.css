@@ -466,3 +466,14 @@ h1 {
 .contact-section .address {
   white-space: pre-wrap;
 }
+.event-section {
+  margin-bottom: 16px;
+}
+
+.event-section .copy-value-row {
+  align-items: flex-start;
+}
+
+.event-section .address {
+  white-space: pre-wrap;
+}

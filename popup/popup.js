@@ -198,7 +198,80 @@ const contactNote =
   document.getElementById(
     "contactNote"
   );  
+const eventSection =
+  document.getElementById(
+    "eventSection"
+  );
 
+const eventTitleField =
+  document.getElementById(
+    "eventTitleField"
+  );
+
+const eventStartField =
+  document.getElementById(
+    "eventStartField"
+  );
+
+const eventEndField =
+  document.getElementById(
+    "eventEndField"
+  );
+
+const eventLocationField =
+  document.getElementById(
+    "eventLocationField"
+  );
+
+const eventDescriptionField =
+  document.getElementById(
+    "eventDescriptionField"
+  );
+
+const eventOrganizerField =
+  document.getElementById(
+    "eventOrganizerField"
+  );
+
+const eventUrlField =
+  document.getElementById(
+    "eventUrlField"
+  );
+
+const eventTitle =
+  document.getElementById(
+    "eventTitle"
+  );
+
+const eventStart =
+  document.getElementById(
+    "eventStart"
+  );
+
+const eventEnd =
+  document.getElementById(
+    "eventEnd"
+  );
+
+const eventLocation =
+  document.getElementById(
+    "eventLocation"
+  );
+
+const eventDescription =
+  document.getElementById(
+    "eventDescription"
+  );
+
+const eventOrganizer =
+  document.getElementById(
+    "eventOrganizer"
+  );
+
+const eventUrl =
+  document.getElementById(
+    "eventUrl"
+  );
 /*
   ============================================================
   2. Raw QR payload elements
@@ -549,6 +622,47 @@ const noDetectedItems =
     "noDetectedItems"
   );
 
+/*
+  ============================================================
+   event elements 
+  ============================================================
+*/
+
+const copyEventTitleButton =
+  document.getElementById(
+    "copyEventTitleButton"
+  );
+
+const copyEventStartButton =
+  document.getElementById(
+    "copyEventStartButton"
+  );
+
+const copyEventEndButton =
+  document.getElementById(
+    "copyEventEndButton"
+  );
+
+const copyEventLocationButton =
+  document.getElementById(
+    "copyEventLocationButton"
+  );
+
+const copyEventDescriptionButton =
+  document.getElementById(
+    "copyEventDescriptionButton"
+  );
+
+const copyEventOrganizerButton =
+  document.getElementById(
+    "copyEventOrganizerButton"
+  );
+
+const copyEventUrlButton =
+  document.getElementById(
+    "copyEventUrlButton"
+  );
+
 
 /*
   ============================================================
@@ -661,7 +775,61 @@ copyEmailBodyButton.addEventListener(
   copyEmailBody
 );
 
+copyEventTitleButton.addEventListener(
+  "click",
+  () => copyEventField(
+    eventTitle,
+    "Event title copied."
+  )
+);
 
+copyEventStartButton.addEventListener(
+  "click",
+  () => copyEventField(
+    eventStart,
+    "Event start copied."
+  )
+);
+
+copyEventEndButton.addEventListener(
+  "click",
+  () => copyEventField(
+    eventEnd,
+    "Event end copied."
+  )
+);
+
+copyEventLocationButton.addEventListener(
+  "click",
+  () => copyEventField(
+    eventLocation,
+    "Event location copied."
+  )
+);
+
+copyEventDescriptionButton.addEventListener(
+  "click",
+  () => copyEventField(
+    eventDescription,
+    "Event description copied."
+  )
+);
+
+copyEventOrganizerButton.addEventListener(
+  "click",
+  () => copyEventField(
+    eventOrganizer,
+    "Event organizer copied."
+  )
+);
+
+copyEventUrlButton.addEventListener(
+  "click",
+  () => copyEventField(
+    eventUrl,
+    "Event URL copied."
+  )
+);
 /*
   ============================================================
   12. Load saved result
@@ -1219,6 +1387,27 @@ async function copyImage(
   }
 }
 
+/*
+  ============================================================
+   Event qr 
+  ============================================================
+*/
+async function copyEventField(
+  element,
+  message
+) {
+  if (
+    !element ||
+    !element.textContent
+  ) {
+    return;
+  }
+
+  await copyText(
+    element.textContent,
+    message
+  );
+}
 
 /*
   ============================================================
@@ -1316,6 +1505,9 @@ function renderResult(
   renderContactResult(
     result
   );
+  renderEventResult(
+    result
+  );
   if (
     result.type ===
     "snapshot"
@@ -1380,7 +1572,9 @@ function renderResult(
     result.type ===
       "sms" ||
     result.type ===
-      "contact"
+      "contact" ||
+    result.type ===
+      "event"
   ) {
     addressSection.classList.toggle(
       "hidden",
@@ -1389,7 +1583,9 @@ function renderResult(
         result.type ===
         "sms" ||
         result.type ===
-        "contact"
+        "contact" ||
+        result.type ===
+        "event"
     );
     pixSection.classList.add(
       "hidden"
@@ -1413,6 +1609,7 @@ function renderResult(
   }
 
   renderAddressField(
+    result
   );
 
   renderDetails(
@@ -1639,6 +1836,202 @@ function renderContactResult(
   );
 }
 
+/*
+  ============================================================
+  Render calendar event QR
+  ------------------------------------------------------------
+  Displays the title, start time, end time, location,
+  description, organizer, and event URL.
+
+  The event is displayed only. It is not automatically added
+  to the user's calendar.
+  ============================================================
+*/
+function renderEventResult(
+  result
+) {
+  resetEventDisplay();
+
+  if (
+    !result ||
+    result.type !==
+    "event"
+  ) {
+    return;
+  }
+
+  eventSection.classList.remove(
+    "hidden"
+  );
+
+  renderEventField(
+    eventTitleField,
+    eventTitle,
+    result.eventTitle
+  );
+
+  renderEventField(
+    eventStartField,
+    eventStart,
+    formatCalendarDate(
+      result.eventStart
+    )
+  );
+
+  renderEventField(
+    eventEndField,
+    eventEnd,
+    formatCalendarDate(
+      result.eventEnd
+    )
+  );
+
+  renderEventField(
+    eventLocationField,
+    eventLocation,
+    result.eventLocation
+  );
+
+  renderEventField(
+    eventDescriptionField,
+    eventDescription,
+    result.eventDescription
+  );
+
+  renderEventField(
+    eventOrganizerField,
+    eventOrganizer,
+    result.eventOrganizer
+  );
+
+  renderEventField(
+    eventUrlField,
+    eventUrl,
+    result.eventUrl
+  );
+}
+
+function renderEventField(
+  field,
+  element,
+  value
+) {
+  const text =
+    value ||
+    "";
+
+  element.textContent =
+    text;
+
+  field.classList.toggle(
+    "hidden",
+    !text
+  );
+}
+
+function formatCalendarDate(
+  value
+) {
+  if (
+    !value
+  ) {
+    return "";
+  }
+
+  const compact =
+    value
+      .trim()
+      .replace(
+        /^TZID=[^:]+:/i,
+        ""
+      );
+
+  const match =
+    compact.match(
+      /^(\d{4})(\d{2})(\d{2})T?(\d{2})?(\d{2})?(\d{2})?(Z)?$/
+    );
+
+  if (
+    !match
+  ) {
+    return value;
+  }
+
+  const [
+    ,
+    year,
+    month,
+    day,
+    hour = "00",
+    minute = "00",
+    second = "00",
+    utc
+  ] =
+    match;
+
+  const date =
+    new Date(
+      `${year}-${month}-${day}T${hour}:${minute}:${second}${utc ? "Z" : ""}`
+    );
+
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
+    return value;
+  }
+
+  return date.toLocaleString(
+    "en-IN",
+    {
+      dateStyle:
+        "medium",
+      timeStyle:
+        "short",
+      timeZone:
+        utc
+          ? "Asia/Kolkata"
+          : undefined
+    }
+  );
+}
+function resetEventDisplay() {
+  eventSection.classList.add(
+    "hidden"
+  );
+
+  [
+    eventTitleField,
+    eventStartField,
+    eventEndField,
+    eventLocationField,
+    eventDescriptionField,
+    eventOrganizerField,
+    eventUrlField
+  ].forEach(
+    (field) => {
+      field.classList.add(
+        "hidden"
+      );
+    }
+  );
+
+  [
+    eventTitle,
+    eventStart,
+    eventEnd,
+    eventLocation,
+    eventDescription,
+    eventOrganizer,
+    eventUrl
+  ].forEach(
+    (element) => {
+      element.textContent =
+        "";
+    }
+  );
+}
 function renderContactField(
   field,
   element,
@@ -3010,6 +3403,7 @@ function resetAllSections() {
   resetEmailDisplay();
   resetSnapshotVisibility();
   resetContactDisplay();
+  resetEventDisplay();
   renderPhoneDetails(
     null
   );
@@ -3085,6 +3479,13 @@ function getResultType(
     "contact"
   ) {
     return "Contact QR";
+  }
+  
+  if (
+    result.type ===
+    "event"
+  ) {
+    return "Calendar event";
   }
   
   return "Payment data";

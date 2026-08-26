@@ -48,21 +48,21 @@
   "commands": {
     "scan-qr": {
       "suggested_key": {
-        "default": "Ctrl+Shift+S"
+        "default": "Alt+Shift+A"
       },
       "description": "Scan a QR code on the current webpage"
     },
 
     "snapshot": {
       "suggested_key": {
-        "default": "Ctrl+Shift+P"
+        "default": "Alt+A"
       },
       "description": "Select an area of the current webpage"
     },
 
     "clear-result": {
       "suggested_key": {
-        "default": "Ctrl+Shift+X"
+        "default": "Alt+X"
       },
       "description": "Clear the latest scan or Snapshot result"
     }

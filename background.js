@@ -2318,6 +2318,38 @@ function extractRecipient(
     );
   }
   if (
+    /^MECARD:/i.test(
+      payload.trim()
+    )
+  ) {
+    return parseMecardPayload(
+      payload
+    );
+  }
+  if (
+    (
+      /^BEGIN:VCALENDAR/i.test(
+        payload.trim()
+      ) ||
+      /^BEGIN:VEVENT/i.test(
+        payload.trim()
+      )
+    ) &&
+    (
+      /END:VCALENDAR/i.test(
+        payload.trim()
+      ) ||
+      /END:VEVENT/i.test(
+        payload.trim()
+      )
+    )
+  ) {
+  return parseCalendarPayload(
+    payload
+  );
+}
+  
+  if (
     /^ln[a-z0-9]+$/i.test(
       payload
     )
@@ -3538,6 +3570,528 @@ function parseVcardPayload(
     copiedAutomatically: false
   };
 }
+/*
+  ============================================================
+  Parse MECARD contact QR payload
+  ------------------------------------------------------------
+  Reads compact MECARD contact fields such as N, ORG, TEL,
+  EMAIL, ADR, URL, and NOTE.
+
+  Example:
+    MECARD:N:Smith,Jane;ORG:Example Company;TEL:+919876543210;EMAIL:jane@example.com;URL:https://example.com;;
+  ============================================================
+*/
+function parseMecardPayload(
+  payload
+) {
+  const value =
+    payload
+      .trim()
+      .replace(
+        /^MECARD:/i,
+        ""
+      )
+      .replace(
+        /;;$/,
+        ""
+      );
+
+  const contact = {
+    name: "",
+    organization: "",
+    title: "",
+    phones: [],
+    emails: [],
+    address: "",
+    website: "",
+    note: ""
+  };
+
+  const fields =
+    splitMecardFields(
+      value
+    );
+
+  fields.forEach(
+    (field) => {
+      const separator =
+        field.indexOf(
+          ":"
+        );
+
+      if (
+        separator ===
+        -1
+      ) {
+        return;
+      }
+
+      const key =
+        field
+          .slice(
+            0,
+            separator
+          )
+          .trim()
+          .toUpperCase();
+
+      const fieldValue =
+        unescapeMecardValue(
+          field.slice(
+            separator + 1
+          )
+        );
+
+      if (
+        !fieldValue
+      ) {
+        return;
+      }
+
+      if (
+        key ===
+        "N"
+      ) {
+        contact.name =
+          formatMecardName(
+            fieldValue
+          );
+      } else if (
+        key ===
+        "ORG"
+      ) {
+        contact.organization =
+          fieldValue;
+      } else if (
+        key ===
+        "TITLE"
+      ) {
+        contact.title =
+          fieldValue;
+      } else if (
+        key ===
+        "TEL"
+      ) {
+        contact.phones.push(
+          fieldValue
+        );
+      } else if (
+        key ===
+        "EMAIL"
+      ) {
+        contact.emails.push(
+          fieldValue
+        );
+      } else if (
+        key ===
+        "ADR"
+      ) {
+        contact.address =
+          fieldValue;
+      } else if (
+        key ===
+        "URL"
+      ) {
+        contact.website =
+          fieldValue;
+      } else if (
+        key ===
+        "NOTE"
+      ) {
+        contact.note =
+          fieldValue;
+      }
+    }
+  );
+
+  contact.phones =
+    uniquePayloadValues(
+      contact.phones
+    );
+
+  contact.emails =
+    uniquePayloadValues(
+      contact.emails
+    );
+
+  if (
+    !contact.name &&
+    contact.phones.length ===
+      0 &&
+    contact.emails.length ===
+      0
+  ) {
+    return {
+      ok: false,
+      error:
+        "MECARD contact information was not found."
+    };
+  }
+
+  return {
+    ok: true,
+    type: "contact",
+    network: "MECARD",
+    contactName:
+      contact.name,
+    contactOrganization:
+      contact.organization,
+    contactTitle:
+      contact.title,
+    contactPhones:
+      contact.phones,
+    contactEmails:
+      contact.emails,
+    contactAddress:
+      contact.address,
+    contactWebsite:
+      contact.website,
+    contactNote:
+      contact.note,
+    copiedAutomatically: false
+  };
+}
+function splitMecardFields(
+  value
+) {
+  const fields =
+    [];
+
+  let current =
+    "";
+
+  let escaped =
+    false;
+
+  for (
+    const character of value
+  ) {
+    if (
+      escaped
+    ) {
+      current +=
+        character;
+
+      escaped =
+        false;
+
+      continue;
+    }
+
+    if (
+      character ===
+      "\\"
+    ) {
+      current +=
+        character;
+
+      escaped =
+        true;
+
+      continue;
+    }
+
+    if (
+      character ===
+      ";"
+    ) {
+      if (
+        current
+      ) {
+        fields.push(
+          current
+        );
+      }
+
+      current =
+        "";
+
+      continue;
+    }
+
+    current +=
+      character;
+  }
+
+  if (
+    current
+  ) {
+    fields.push(
+      current
+    );
+  }
+
+  return fields;
+}
+/*
+  ============================================================
+  Parse calendar event QR payload
+  ------------------------------------------------------------
+  Reads iCalendar payloads containing a VCALENDAR and VEVENT
+  block.
+
+  Supported fields include SUMMARY, DTSTART, DTEND,
+  LOCATION, DESCRIPTION, URL, and UID.
+
+  The event is displayed only. It is not automatically added
+  to the user's calendar.
+  ============================================================
+*/
+function parseCalendarPayload(
+  payload
+) {
+  const normalized =
+    payload
+      .replace(
+        /\r\n[ \t]/g,
+        ""
+      )
+      .replace(
+        /\n[ \t]/g,
+        ""
+      );
+
+  const lines =
+    normalized.split(
+      /\r?\n/
+    );
+
+  const event = {
+    uid: "",
+    title: "",
+    start: "",
+    end: "",
+    location: "",
+    description: "",
+    url: "",
+    organizer: ""
+  };
+
+  let insideEvent =
+    false;
+
+  lines.forEach(
+    (line) => {
+      const cleanLine =
+        line.trim();
+
+      if (
+        cleanLine.toUpperCase() ===
+        "BEGIN:VEVENT"
+      ) {
+        insideEvent =
+          true;
+
+        return;
+      }
+
+      if (
+        cleanLine.toUpperCase() ===
+        "END:VEVENT"
+      ) {
+        insideEvent =
+          false;
+
+        return;
+      }
+
+      if (
+        !insideEvent
+      ) {
+        return;
+      }
+
+      const separator =
+        cleanLine.indexOf(
+          ":"
+        );
+
+      if (
+        separator ===
+        -1
+      ) {
+        return;
+      }
+
+      const property =
+        cleanLine
+          .slice(
+            0,
+            separator
+          )
+          .split(
+            ";"
+          )[0]
+          .trim()
+          .toUpperCase();
+
+      const value =
+        unescapeCalendarValue(
+          cleanLine.slice(
+            separator + 1
+          )
+        );
+
+      if (
+        property ===
+        "UID"
+      ) {
+        event.uid =
+          value;
+      } else if (
+        property ===
+        "SUMMARY"
+      ) {
+        event.title =
+          value;
+      } else if (
+        property ===
+        "DTSTART"
+      ) {
+        event.start =
+          value;
+      } else if (
+        property ===
+        "DTEND"
+      ) {
+        event.end =
+          value;
+      } else if (
+        property ===
+        "LOCATION"
+      ) {
+        event.location =
+          value;
+      } else if (
+        property ===
+        "DESCRIPTION"
+      ) {
+        event.description =
+          value;
+      } else if (
+        property ===
+        "URL"
+      ) {
+        event.url =
+          value;
+      } else if (
+        property ===
+        "ORGANIZER"
+      ) {
+        event.organizer =
+          value;
+      }
+    }
+  );
+
+  if (
+    !event.title &&
+    !event.start &&
+    !event.end
+  ) {
+    return {
+      ok: false,
+      error:
+        "Calendar QR was detected, but no event information was found."
+    };
+  }
+
+  return {
+    ok: true,
+    type: "event",
+    network: "Calendar",
+    eventUid:
+      event.uid,
+    eventTitle:
+      event.title,
+    eventStart:
+      event.start,
+    eventEnd:
+      event.end,
+    eventLocation:
+      event.location,
+    eventDescription:
+      event.description,
+    eventUrl:
+      event.url,
+    eventOrganizer:
+      event.organizer,
+    copiedAutomatically: false
+  };
+}
+function unescapeCalendarValue(
+  value
+) {
+  return value
+    .replace(
+      /\\n/gi,
+      "\n"
+    )
+    .replace(
+      /\\,/g,
+      ","
+    )
+    .replace(
+      /\\;/g,
+      ";"
+    )
+    .replace(
+      /\\\\/g,
+      "\\"
+    )
+    .trim();
+}
+
+function unescapeMecardValue(
+  value
+) {
+  return value
+    .replace(
+      /\\n/gi,
+      "\n"
+    )
+    .replace(
+      /\\,/g,
+      ","
+    )
+    .replace(
+      /\\;/g,
+      ";"
+    )
+    .replace(
+      /\\\\/g,
+      "\\"
+    )
+    .trim();
+}
+
+function formatMecardName(
+  value
+) {
+  const parts =
+    value.split(
+      ","
+    );
+
+  if (
+    parts.length >=
+    2
+  ) {
+    return [
+      parts[1].trim(),
+      parts[0].trim()
+    ]
+      .filter(
+        Boolean
+      )
+      .join(
+        " "
+      );
+  }
+
+  return value.trim();
+}
+
 function unescapeVcardValue(
   value
 ) {

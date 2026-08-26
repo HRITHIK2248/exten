@@ -826,6 +826,20 @@ function showPaymentResult(
     false;
 
   if (
+    result &&
+    result.type ===
+    "snapshot"
+  ) {
+    showMessage(
+      "Snapshot captured",
+      "The selected webpage area was captured successfully.",
+      "success"
+    );
+
+    return;
+  }
+
+  if (
     !result ||
     !result.ok
   ) {
