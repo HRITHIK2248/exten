@@ -2,209 +2,205 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1"
-  >
-
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Payment QR Tool Settings</title>
-
   <style>
-    * {
-      box-sizing: border-box;
+    :root {
+      --bg: #050816;
+      --panel: #0b1020;
+      --card: #101a2f;
+      --input: #0d1628;
+      --border: #1d3152;
+      --border-bright: #315f91;
+      --cyan: #00e5ff;
+      --cyan-soft: rgba(0, 229, 255, 0.12);
+      --violet: #a855f7;
+      --green: #00f5a0;
+      --text: #f4f7ff;
+      --muted: #8793ad;
+      --muted-bright: #b7c4da;
     }
 
+    * { box-sizing: border-box; }
+
+    html { min-height: 100%; background: var(--bg); }
+
     body {
-      max-width: 560px;
+      max-width: 620px;
+      min-height: 100vh;
       margin: 0 auto;
       padding: 24px;
-      color: #101828;
-      background: #f8fafc;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 90% 0%, rgba(0, 229, 255, 0.14), transparent 30%),
+        radial-gradient(circle at 0% 100%, rgba(168, 85, 247, 0.14), transparent 34%),
+        var(--bg);
       font-family: Arial, sans-serif;
     }
 
     h1 {
       margin: 0 0 8px;
-      font-size: 22px;
+      color: var(--cyan);
+      font-size: 24px;
+      letter-spacing: 0.04em;
+      text-shadow: 0 0 8px rgba(0, 229, 255, 0.55), 0 0 22px rgba(0, 229, 255, 0.22);
     }
 
     h2 {
-      margin: 28px 0 10px;
+      margin: 30px 0 12px;
+      color: var(--violet);
       font-size: 17px;
+      letter-spacing: 0.04em;
+      text-shadow: 0 0 10px rgba(168, 85, 247, 0.35);
     }
 
     .description {
       margin: 0 0 22px;
-      color: #667085;
+      color: var(--muted);
       font-size: 13px;
+      line-height: 1.5;
     }
 
     .setting {
       margin-bottom: 15px;
-      padding: 14px;
-      background: #ffffff;
-      border: 1px solid #d0d5dd;
-      border-radius: 8px;
+      padding: 16px;
+      background: rgba(16, 26, 47, 0.94);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--cyan);
+      border-radius: 10px;
+      box-shadow: 0 0 18px rgba(0, 0, 0, 0.3), inset 0 0 18px rgba(0, 229, 255, 0.025);
+    }
+
+    .setting:hover {
+      border-color: var(--border-bright);
+      box-shadow: 0 0 22px rgba(0, 229, 255, 0.08), inset 0 0 18px rgba(0, 229, 255, 0.04);
     }
 
     label {
       display: block;
       margin-bottom: 7px;
-      color: #344054;
+      color: var(--muted-bright);
       font-size: 14px;
       font-weight: 700;
+      letter-spacing: 0.02em;
     }
 
     .help {
-      margin: 0 0 8px;
-      color: #667085;
+      margin: 0 0 9px;
+      color: var(--muted);
       font-size: 12px;
+      line-height: 1.45;
     }
 
-    input,
-    select {
+    input, select {
       width: 100%;
-      padding: 9px;
-      border: 1px solid #98a2b3;
-      border-radius: 6px;
+      padding: 10px;
+      color: var(--text);
+      background: var(--input);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      outline: none;
       font-size: 14px;
     }
+
+    input:hover, select:hover { border-color: var(--border-bright); }
+
+    input:focus, select:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 13px rgba(0, 229, 255, 0.25);
+    }
+
+    select option { color: var(--text); background: var(--panel); }
 
     button {
-      padding: 10px 18px;
-      color: #ffffff;
-      background: #175cd3;
-      border: 0;
-      border-radius: 7px;
+      padding: 11px 20px;
+      color: #001014;
+      background: var(--cyan);
+      border: 1px solid var(--cyan);
+      border-radius: 8px;
       cursor: pointer;
+      box-shadow: 0 0 16px rgba(0, 229, 255, 0.3);
       font-size: 14px;
       font-weight: 700;
+      transition: background 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
     }
 
     button:hover {
-      background: #1849a9;
+      background: #66f3ff;
+      box-shadow: 0 0 24px rgba(0, 229, 255, 0.6);
+      transform: translateY(-1px);
+    }
+
+    button:active { transform: translateY(0); }
+
+    button:focus-visible, input:focus-visible, select:focus-visible {
+      outline: 2px solid var(--cyan);
+      outline-offset: 2px;
     }
 
     #status {
       display: inline-block;
       margin-left: 12px;
-      color: #087f5b;
+      color: var(--green);
       font-size: 13px;
+      font-weight: 700;
+      text-shadow: 0 0 8px rgba(0, 245, 160, 0.45);
     }
 
     #previewCanvas {
       display: block;
       width: 100%;
       height: auto;
-      background: #ffffff;
-      border: 1px solid #d0d5dd;
-      border-radius: 8px;
+      background: #070d1b;
+      border: 1px solid var(--border-bright);
+      border-radius: 10px;
+      box-shadow: 0 0 22px rgba(168, 85, 247, 0.18), inset 0 0 20px rgba(0, 229, 255, 0.04);
+    }
+
+    @media (max-width: 520px) {
+      body { padding: 16px; }
+      h1 { font-size: 21px; }
+      #status { display: block; margin: 10px 0 0; }
     }
   </style>
 </head>
-
 <body>
   <h1>Payment QR Tool Settings</h1>
-
-  <p class="description">
-    Adjust the highlighted screenshot border and arrow.
-  </p>
+  <p class="description">NEON CONFIGURATION PANEL · Screenshot appearance controls</p>
 
   <div class="setting">
-    <label for="borderSpacing">
-      Border spacing
-    </label>
-
-    <p class="help">
-      Space between QR and border, in pixels.
-    </p>
-
-    <input
-      id="borderSpacing"
-      type="number"
-      min="1"
-      max="100"
-      step="1"
-    >
+    <label for="borderSpacing">Border spacing</label>
+    <p class="help">Space between QR and border, in pixels.</p>
+    <input id="borderSpacing" type="number" min="1" max="100" step="1">
   </div>
 
   <div class="setting">
-    <label for="borderThickness">
-      Border thickness
-    </label>
-
-    <p class="help">
-      Thickness of the red border, in pixels.
-    </p>
-
-    <input
-      id="borderThickness"
-      type="number"
-      min="1"
-      max="30"
-      step="1"
-    >
+    <label for="borderThickness">Border thickness</label>
+    <p class="help">Thickness of the red border, in pixels.</p>
+    <input id="borderThickness" type="number" min="1" max="30" step="1">
   </div>
 
   <div class="setting">
-    <label for="arrowSize">
-      Arrow size
-    </label>
-
-    <p class="help">
-      Relative arrow length. Use a value between 0.03 and 0.30.
-    </p>
-
-    <input
-      id="arrowSize"
-      type="number"
-      min="0.03"
-      max="0.30"
-      step="0.01"
-    >
+    <label for="arrowSize">Arrow size</label>
+    <p class="help">Relative arrow length. Use a value between 0.03 and 0.30.</p>
+    <input id="arrowSize" type="number" min="0.03" max="0.30" step="0.01">
   </div>
 
   <div class="setting">
-    <label for="arrowDirection">
-      Arrow side
-    </label>
-
-    <p class="help">
-      Automatic selects the side with the best available space.
-    </p>
-
+    <label for="arrowDirection">Arrow side</label>
+    <p class="help">Automatic selects the side with the best available space.</p>
     <select id="arrowDirection">
-      <option value="auto">
-        Automatic
-      </option>
-
-      <option value="left">
-        Left side of QR
-      </option>
-
-      <option value="right">
-        Right side of QR
-      </option>
+      <option value="auto">Automatic</option>
+      <option value="left">Left side of QR</option>
+      <option value="right">Right side of QR</option>
     </select>
   </div>
 
-  <button
-    id="saveButton"
-    type="button"
-  >
-    Save settings
-  </button>
-
+  <button id="saveButton" type="button">Save settings</button>
   <span id="status"></span>
 
   <h2>Live preview</h2>
-
-  <canvas
-    id="previewCanvas"
-    width="420"
-    height="260"
-  ></canvas>
+  <canvas id="previewCanvas" width="420" height="260"></canvas>
 
   <script src="options.js"></script>
 </body>

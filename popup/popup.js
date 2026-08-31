@@ -7,6 +7,82 @@
   ============================================================
 */
 
+
+
+const pageAnalysisSection =
+  document.getElementById(
+    "pageAnalysisSection"
+  );
+
+const pageAnalysisStatus =
+  document.getElementById(
+    "pageAnalysisStatus"
+  );
+
+const pageAnalysisResults =
+  document.getElementById(
+    "pageAnalysisResults"
+  );
+
+const pageAnalysisPhones =
+  document.getElementById(
+    "pageAnalysisPhones"
+  );
+
+const pageAnalysisEmails =
+  document.getElementById(
+    "pageAnalysisEmails"
+  );
+
+const pageAnalysisAddresses =
+  document.getElementById(
+    "pageAnalysisAddresses"
+  );
+
+const pageAnalysisPhoneList =
+  document.getElementById(
+    "pageAnalysisPhoneList"
+  );
+
+const pageAnalysisEmailList =
+  document.getElementById(
+    "pageAnalysisEmailList"
+  );
+
+const pageAnalysisAddressList =
+  document.getElementById(
+    "pageAnalysisAddressList"
+  );
+
+const pageAnalysisEmpty =
+  document.getElementById(
+    "pageAnalysisEmpty"
+  );
+
+const websiteHost =
+  document.getElementById(
+    "websiteHost"
+  ) || {
+    textContent: ""
+  };
+
+const websitePort =
+  document.getElementById(
+    "websitePort"
+  ) || {
+    textContent: ""
+  };
+
+const websiteHash =
+  document.getElementById(
+    "websiteHash"
+  ) || {
+    textContent: ""
+  };
+
+const SNAPSHOT_DEFAULT_COUNTRY =
+  "IN";
+  
 const scanButton =
   document.getElementById(
     "scanButton"
@@ -16,7 +92,10 @@ const snapshotButton =
   document.getElementById(
     "snapshotButton"
   );
-
+const analyzePageButton =
+  document.getElementById(
+    "analyzePageButton"
+  );
 const clearButton =
   document.getElementById(
     "clearButton"
@@ -567,6 +646,16 @@ const copyQrButton =
   ============================================================
 */
 
+const selectedText =
+  document.getElementById(
+    "selectedText"
+  );
+
+const copySelectedTextButton =
+  document.getElementById(
+    "copySelectedTextButton"
+  );
+
 const snapshotTextBlock =
   document.getElementById(
     "snapshotTextBlock"
@@ -680,6 +769,21 @@ let latestResult =
   ============================================================
 */
 
+copySelectedTextButton.addEventListener(
+  "click",
+  copySelectedSnapshotText
+);
+
+copySmsRecipientButton.addEventListener(
+  "click",
+  copySmsRecipient
+);
+
+copySmsMessageButton.addEventListener(
+  "click",
+  copySmsMessage
+);
+
 scanButton.addEventListener(
   "click",
   startScan
@@ -688,6 +792,11 @@ scanButton.addEventListener(
 snapshotButton.addEventListener(
   "click",
   startSnapshot
+);
+
+analyzePageButton.addEventListener(
+  "click",
+  analyzeWebpage
 );
 
 clearButton.addEventListener(
@@ -823,6 +932,7 @@ copyEventOrganizerButton.addEventListener(
   )
 );
 
+
 copyEventUrlButton.addEventListener(
   "click",
   () => copyEventField(
@@ -860,6 +970,8 @@ async function loadLatestResult() {
     );
   }
 }
+
+
 
 
 /*
@@ -1203,7 +1315,18 @@ async function openWebsiteUrl() {
   }
 }
 
+async function copySelectedSnapshotText() {
+  if (
+    !selectedText.value
+  ) {
+    return;
+  }
 
+  await copyText(
+    selectedText.value,
+    "Selected text copied."
+  );
+}
 
 
 async function copySmsRecipient() {
@@ -1458,6 +1581,102 @@ function showCopyStatus(
 
 /*
   ============================================================
+  webpage analze 
+  ============================================================
+*/
+
+function renderPageAnalysis(text) {
+  const emails =
+    extractEmails(text);
+
+  const phones =
+    extractPhones(text);
+
+  const addresses =
+    extractAddresses(
+      text,
+      emails,
+      phones,
+      []
+    );
+
+  pageAnalysisPhoneList.innerHTML =
+    "";
+
+  pageAnalysisEmailList.innerHTML =
+    "";
+
+  pageAnalysisAddressList.innerHTML =
+    "";
+
+  phones.forEach((phone) => {
+    addDetectedItem(
+      pageAnalysisPhoneList,
+      phone.display,
+      "Copy phone",
+      phone.copyValue
+    );
+  });
+
+  emails.forEach((email) => {
+    addDetectedItem(
+      pageAnalysisEmailList,
+      email,
+      "Copy email"
+    );
+  });
+
+  addresses.forEach((address) => {
+    addDetectedItem(
+      pageAnalysisAddressList,
+      address,
+      "Copy address"
+    );
+  });
+
+  const hasResults =
+    phones.length > 0 ||
+    emails.length > 0 ||
+    addresses.length > 0;
+
+  pageAnalysisPhones.classList.toggle(
+    "hidden",
+    phones.length === 0
+  );
+
+  pageAnalysisEmails.classList.toggle(
+    "hidden",
+    emails.length === 0
+  );
+
+  pageAnalysisAddresses.classList.toggle(
+    "hidden",
+    addresses.length === 0
+  );
+
+  pageAnalysisResults.classList.toggle(
+    "hidden",
+    !hasResults
+  );
+
+  pageAnalysisEmpty.classList.toggle(
+    "hidden",
+    hasResults
+  );
+
+  pageAnalysisStatus.textContent =
+    hasResults
+      ? "Analysis complete."
+      : "No matching information found.";
+
+  pageAnalysisSection.classList.remove(
+    "hidden"
+  );
+}
+
+
+/*
+  ============================================================
   23. Render the result
   ============================================================
 */
@@ -1495,19 +1714,6 @@ function renderResult(
     result
   );
 
-  renderWebsiteResult(
-    result
-  );
-
-  renderEmailResult(
-    result
-  );
-  renderContactResult(
-    result
-  );
-  renderEventResult(
-    result
-  );
   if (
     result.type ===
     "snapshot"
@@ -1519,6 +1725,22 @@ function renderResult(
     return;
   }
 
+  renderWebsiteResult(
+    result
+  );
+
+  renderEmailResult(
+    result
+  );
+
+  renderContactResult(
+    result
+  );
+
+  renderEventResult(
+    result
+  );
+  
   emptyState.classList.add(
     "hidden"
   );
@@ -1668,10 +1890,20 @@ function renderWebsiteResult(
   let url;
 
   try {
+    
+    let rawUrl =
+     result.rawPayload.trim();
+
+    if (
+     /^www\./i.test(rawUrl)
+    ) {
+      rawUrl =
+       `https://${rawUrl}`;
+    }
+
     url =
-      new URL(
-        result.rawPayload.trim()
-      );
+      new URL(rawUrl);
+    
   } catch {
     return;
   }
@@ -1699,7 +1931,18 @@ function renderWebsiteResult(
 
   websiteDomain.textContent =
     url.hostname;
+  
+  websiteHost.textContent =
+    url.host;
 
+  websitePort.textContent =
+    url.port ||
+    "Default";
+
+  websiteHash.textContent =
+    url.hash ||
+    "None";
+  
   websitePath.textContent =
     url.pathname ||
     "/";
@@ -1746,6 +1989,15 @@ function resetWebsiteDisplay() {
 
   websiteWarning.textContent =
     "";
+    
+  websiteHost.textContent =
+    "";
+
+  websitePort.textContent =
+    "";
+
+  websiteHash.textContent =
+    "";  
 
   websiteWarning.classList.add(
     "hidden"
@@ -2444,6 +2696,13 @@ function renderSnapshotResult(
   copyStatus.textContent =
     "";
 
+  resetWebsiteDisplay();
+  resetEmailDisplay();
+  resetContactDisplay();
+  resetEventDisplay();
+  renderPhoneDetails(null);
+  renderSmsDetails(null);
+
   imageSection.classList.remove(
     "hidden"
   );
@@ -2454,6 +2713,18 @@ function renderSnapshotResult(
 
   copyHighlightedButton.disabled =
     !result.highlightedScreenshot;
+
+  if (
+    result.highlightedScreenshot
+  ) {
+    highlightedScreenshot.classList.remove(
+      "hidden"
+    );
+  } else {
+    highlightedScreenshot.classList.add(
+      "hidden"
+    );
+  }
 
   qrOnlyImage.removeAttribute(
     "src"
@@ -2470,14 +2741,31 @@ function renderSnapshotResult(
   snapshotTextBlock.classList.remove(
     "hidden"
   );
+  
+  const selectedTextBlock =
+    document.getElementById(
+      "selectedTextBlock"
+    );
+
+  selectedTextBlock.classList.remove(
+    "hidden"
+  );
+
+  const text =
+    result.detectedText ||
+    result.selectedText ||
+    "";
+
+  selectedText.value =
+    text;
+
+  copySelectedTextButton.disabled =
+    !text;
 
   renderDetectedItems(
-    result.detectedText ||
-      result.selectedText ||
-      ""
+    text
   );
 }
-
 
 /*
   ============================================================
@@ -2528,6 +2816,64 @@ function renderImages(
   }
 }
 
+function addDetectedItem(
+  container,
+  value,
+  buttonText,
+  copyValue = value
+) {
+  const row =
+    document.createElement("div");
+
+  row.className =
+    "detected-row";
+
+  const valueElement =
+    document.createElement("code");
+
+  valueElement.className =
+    "detected-value";
+
+  valueElement.textContent =
+    value;
+
+  const button =
+    document.createElement("button");
+
+  button.type =
+    "button";
+
+  button.className =
+    "copy-button";
+
+  button.textContent =
+    buttonText;
+
+  button.addEventListener(
+    "click",
+    () => {
+      copyText(
+        copyValue,
+        `${buttonText.replace(
+          /^Copy\s*/i,
+          ""
+        )} copied.`
+      );
+    }
+  );
+
+  row.appendChild(
+    valueElement
+  );
+
+  row.appendChild(
+    button
+  );
+
+  container.appendChild(
+    row
+  );
+}
 
 /*
   ============================================================
@@ -2652,6 +2998,8 @@ function renderDetectedItems(
 }
 
 
+
+
 /*
   ============================================================
   30. Snapshot extraction helpers
@@ -2671,86 +3019,340 @@ function extractEmails(
   );
 }
 
-function extractPhones(
-  text
-) {
+
+function extractPhones(text) {
   const matches =
     text.match(
-      /(?:\+\d{1,3}[\s.-]?)?(?:\(?\d{2,5}\)?[\s.-]?)?\d{3,4}[\s.-]?\d{3,4}/g
+      /(?:\+\d{1,3}[\s().-]*)?(?:\(?\d{2,5}\)?[\s.-]*)?\d(?:[\d\s().-]*\d)?/g
     ) || [];
 
-  const phones =
-    [];
+  const phones = [];
+  const seen = new Set();
 
-  matches.forEach(
-    (value) => {
-      const display =
-        cleanDetectedValue(
-          value
-        );
+  matches.forEach((value) => {
+    const display =
+      cleanDetectedValue(value)
+        .replace(/\s+/g, " ")
+        .trim();
 
-      const digits =
-        display.replace(
-          /\D/g,
-          ""
-        );
+    const digits =
+      display.replace(/\D/g, "");
 
-      if (
-        digits.length <
-          7 ||
-        digits.length >
-          15
-      ) {
-        return;
-      }
-
-      phones.push({
-        display,
-
-        copyValue:
-          display
-      });
+    if (
+      digits.length < 7 ||
+      digits.length > 15
+    ) {
+      return;
     }
-  );
+    
+    /*
+      Reject two six-digit groups separated only by spaces.
+      These are commonly IDs, counters, or timestamps rather
+      than real telephone numbers.
 
-  const seen =
-    new Set();
+      Example rejected:
+      659020 114848
+    */
+    if (
+      /^\d{6}\s+\d{6}$/.test(
+        display
+      )
+    ) {
+      return;
+    }
+    
+    
+    /*
+      Reject sequences such as:
+      1 2 3 4 5 6 7 8 9
+      123456789
+      1-2-3-4-5-6-7-8-9
+    */
+    if (
+      /^(?:[1-9][\s.-]*){7,15}$/.test(
+        display
+      )
+    ) {
+      return;
+    }
 
-  return phones.filter(
-    (phone) => {
-      if (
-        seen.has(
-          phone.copyValue
-        )
-      ) {
-        return false;
-      }
+    /*
+      Reject ascending or descending digit sequences.
+    */
+    const isAscending =
+      digits.length >= 7 &&
+      digits
+        .split("")
+        .every(
+          (digit, index, array) =>
+            index === 0 ||
+            Number(digit) ===
+              Number(array[index - 1]) + 1
+        );
 
-      seen.add(
-        phone.copyValue
+    const isDescending =
+      digits.length >= 7 &&
+      digits
+        .split("")
+        .every(
+          (digit, index, array) =>
+            index === 0 ||
+            Number(digit) ===
+              Number(array[index - 1]) - 1
+        );
+
+    if (
+      isAscending ||
+      isDescending
+    ) {
+      return;
+    }
+
+    /*
+      Reject four-digit years and year ranges.
+    */
+    if (
+      /^\d{4}$/.test(display) ||
+      /^\d{4}\s*[-/]\s*\d{4}$/.test(
+        display
+      )
+    ) {
+      return;
+    }
+
+     /*
+      Reject amounts, prices, decimal values, and money-style text.
+
+      Examples:
+      555.00 50000
+      ₹555.00
+      $1,250.50
+      499.99
+    */
+    const looksLikeAmount =
+      /(?:₹|\$|€|£)?\s*\d{1,3}(?:,\d{3})*(?:\.\d{2})(?:\s+\d{1,6})?/.test(
+        display
       );
 
-      return true;
+    if (
+      looksLikeAmount
+    ) {
+      return;
     }
-  );
+
+    /*
+      A period is often a decimal separator. Allow it only when
+      the full value has obvious phone-number grouping, such as:
+      555.123.4567
+      +91.98765.43210
+    */
+    if (
+      display.includes(".") &&
+      !/^\+?\d{1,3}(?:[.\s-]\d{2,5}){2,4}$/.test(
+        display
+      )
+    ) {
+      return;
+    }
+
+    const hasInternationalPrefix =
+      /^\s*(?:\+|00)\d/.test(
+        display
+      );
+
+    const hasParentheses =
+      /[()]/.test(
+        display
+      );
+
+    const hasHyphen =
+      /-/.test(
+        display
+      );
+
+    const hasDot =
+      /\./.test(
+        display
+      );
+
+    const spaceGroups =
+      display
+        .trim()
+        .split(/\s+/)
+        .filter(
+          Boolean
+        );
+
+    /*
+      A short two-part value such as "20000 13" is usually an
+      amount, count, reference, or code—not a phone number.
+
+      Permit space-only formatting only when it has at least
+      three digit groups, such as:
+      98765 43210
+      020 7946 0958
+      +91 98765 43210
+    */
+    const hasSafeSpaceGrouping =
+      spaceGroups.length >=
+        3 &&
+      spaceGroups.every(
+        (group) =>
+          /^\d{2,5}$/.test(
+           group
+          )
+      ) &&
+      digits.length >=
+        10;
+    
+    /*
+      Reject likely date/time, counter, and ID formats.
+
+      Examples rejected:
+      17062026 2029
+      659020 114848
+    */
+    const hasLongDateLikeGroup =
+      spaceGroups.some(
+        (group) =>
+          /^\d{8}$/.test(
+            group
+         ) ||
+          /^\d{6}$/.test(
+            group
+          )
+      );
+
+    const hasShortTrailingGroup =
+      spaceGroups.length >=
+        2 &&
+      /^\d{2,4}$/.test(
+        spaceGroups[
+          spaceGroups.length - 1
+        ]
+      );
+
+    if (
+      hasLongDateLikeGroup &&
+      hasShortTrailingGroup
+    ) {
+      return;
+    }
+    
+    const isIndianMobileTwoGroupFormat =
+      /^\s*[6-9]\d{4}\s\d{5}\s*$/.test(
+        display
+      );
+     
+    /*
+      Reject two groups of six digits with only a space.
+      This pattern is commonly a timestamp, ID, or counter,
+      not a normal telephone number.
+    */
+    if (
+      /^\d{6}\s+\d{6}$/.test(
+        display
+      )
+    ) {
+      return;
+    }
+     
+    /*
+      A phone candidate must have strong formatting evidence.
+      This prevents values such as "20000 13" from being treated
+      as phone numbers.
+    */
+    const isLikelyPhone =
+      hasInternationalPrefix ||
+      hasParentheses ||
+      hasHyphen ||
+      hasDot ||
+      hasSafeSpaceGrouping ||
+      isIndianMobileTwoGroupFormat ||
+      /^\d{10,15}$/.test(
+        digits
+      );
+
+    if (
+      !isLikelyPhone
+    ) {
+      return;
+    }
+    const normalized =
+      display.replace(
+        /[^\d+]/g,
+        ""
+      );
+
+    if (
+      seen.has(normalized)
+    ) {
+      return;
+    }
+
+    seen.add(normalized);
+
+    phones.push({
+      display,
+      copyValue: display
+    });
+  });
+
+  return phones;
 }
 
-function extractUrls(
-  text
-) {
+
+
+function extractUrls(text) {
   const matches =
     text.match(
-      /\bhttps?:\/\/[^\s<>"']+|\b(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+\b/gi
+      /(?:https?:\/\/|www\.)[^\s<>"']+|(?:[a-z0-9-]+\.)+[a-z]{2,63}(?:\/[^\s<>"']*)?/gi
     ) || [];
 
   return uniqueValues(
-    matches.map(
-      (value) =>
-        cleanDetectedValue(
-          value
-        )
-    )
+    matches
+      .map((value) =>
+        cleanDetectedValue(value)
+      )
+      .filter((value) =>
+        isRecognizedUrl(value)
+      )
   );
+}
+
+function isRecognizedUrl(value) {
+  let candidate =
+    value.trim();
+
+  if (
+    /^www\./i.test(candidate)
+  ) {
+    candidate =
+      `https://${candidate}`;
+  } else if (
+    !/^[a-z][a-z0-9+.-]*:\/\//i.test(
+      candidate
+    )
+  ) {
+    candidate =
+      `https://${candidate}`;
+  }
+
+  try {
+    const url =
+      new URL(candidate);
+
+    return (
+      (
+        url.protocol === "http:" ||
+        url.protocol === "https:"
+      ) &&
+      Boolean(url.hostname) &&
+      url.hostname.includes(".")
+    );
+  } catch {
+    return false;
+  }
 }
 
 function extractAddresses(
@@ -2760,68 +3362,134 @@ function extractAddresses(
   urls
 ) {
   const lines =
-    text.split(
-      /[\r\n]+/
-    );
+    text
+      .split(/[\r\n]+/)
+      .map((line) =>
+        cleanDetectedValue(line)
+          .replace(/\s+/g, " ")
+          .trim()
+      )
+      .filter(Boolean);
 
   const excluded =
     new Set([
-      ...emails,
-
-      ...phones.map(
-        (phone) =>
-          phone.copyValue
+      ...emails.map((value) =>
+        value.toLowerCase()
       ),
-
-      ...urls
+      ...phones.map((phone) =>
+        phone.copyValue.toLowerCase()
+      ),
+      ...urls.map((value) =>
+        value.toLowerCase()
+      )
     ]);
 
-  const addresses =
-    [];
+  const addresses = [];
 
-  lines.forEach(
-    (line) => {
-      const value =
-        cleanDetectedValue(
-          line
-        );
+  lines.forEach((value) => {
+    const lower =
+      value.toLowerCase();
 
-      if (
-        !value ||
-        excluded.has(
-          value
-        )
-      ) {
-        return;
-      }
-
-      const hasNumber =
-        /\d/.test(
-          value
-        );
-
-      const hasAddressWord =
-        /\b(?:street|st|road|rd|avenue|ave|lane|ln|boulevard|blvd|building|bldg|floor|block|sector|nagar|colony|district|city|state|zip|pincode|pin code|india)\b/i.test(
-          value
-        );
-
-      if (
-        hasNumber &&
-        hasAddressWord &&
-        value.length <=
-          300
-      ) {
-        addresses.push(
-          value
-        );
-      }
+    if (
+      value.length < 8 ||
+      value.length > 300 ||
+      excluded.has(lower)
+    ) {
+      return;
     }
-  );
+
+    /*
+      Reject company/legal/registration text.
+    */
+    if (
+      /\b(?:cnpj|cpf|copyright|direitos reservados|registro|registrado|autorizad[ao]|minist[eé]rio|fazenda|ltda|limitada|marca administrada|todos os direitos|202\d)\b/i.test(
+        value
+      )
+    ) {
+      return;
+    }
+
+    /*
+      Reject legal/company lines containing a tax ID.
+      Current Brazilian CNPJ format is 00.000.000/0000-00.
+      This prevents CNPJ numbers from becoming addresses.
+    */
+    if (
+      /\b\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}\b/.test(
+        value
+      )
+    ) {
+      return;
+    }
+
+    /*
+      Reject year ranges such as 2002-2026.
+    */
+    if (
+      /\b(?:19|20)\d{2}\s*[-/]\s*(?:19|20)\d{2}\b/.test(
+        value
+      )
+    ) {
+      return;
+    }
+
+    /*
+      A real address normally has a house number followed by
+      a street name, or a strong street keyword.
+    */
+    const hasHouseNumber =
+      /^\s*\d+[A-Za-z]?(?:[-/]\d+[A-Za-z]?)?\s+\D/.test(
+        value
+      );
+
+    const hasStreetWord =
+      /\b(?:street|st\.?|road|rd\.?|avenue|ave\.?|lane|ln\.?|boulevard|blvd\.?|drive|dr\.?|way|place|pl\.?|court|ct\.?|parkway|pkwy\.?|highway|hwy\.?|rua|r\.?|avenida|av\.?|travessa|alameda|estrada|praça|praca|weg|straat|laan|gracht|kade)\b/i.test(
+        value
+      );
+
+    const hasAddressUnit =
+      /\b(?:building|bldg\.?|floor|fl\.?|suite|unit|apartment|apt\.?|block|sector|nagar|colony)\b/i.test(
+        value
+      );
+
+    const hasPostalCode =
+      /\b(?:\d{5}(?:-\d{4})?|\d{4}\s?[A-Z]{2}|\d{5}-\d{3})\b/i.test(
+        value
+      );
+
+    const hasCommaStructure =
+      value.split(",").length >= 2;
+
+    /*
+      Accept only when there is meaningful address structure.
+    */
+    if (
+      (
+        hasHouseNumber &&
+        (
+          hasStreetWord ||
+          hasCommaStructure
+        )
+      ) ||
+      (
+        hasStreetWord &&
+        hasPostalCode
+      ) ||
+      (
+        hasAddressUnit &&
+        hasStreetWord
+      )
+    ) {
+      addresses.push(value);
+    }
+  });
 
   return uniqueValues(
     addresses
   );
 }
+
+
 
 function extractPhoneFromUpiId(
   upiId
@@ -3311,6 +3979,16 @@ function renderDetails(
 */
 
 function resetSnapshotVisibility() {
+
+  const selectedTextBlock =
+    document.getElementById(
+      "selectedTextBlock"
+   );
+
+  selectedTextBlock.classList.add(
+    "hidden"
+  );
+  
   qrOnlyImage.classList.remove(
     "hidden"
   );
@@ -3358,6 +4036,12 @@ function resetSnapshotVisibility() {
 
   addressList.innerHTML =
     "";
+    
+  selectedText.value =
+    "";
+
+  copySelectedTextButton.disabled =
+    true;
 }
 
 function resetAllSections() {
@@ -3397,6 +4081,30 @@ function resetAllSections() {
 
   copyStatus.textContent =
     "";
+    
+  pageAnalysisSection.classList.add(
+    "hidden"
+  );
+
+  pageAnalysisStatus.textContent =
+    "";
+
+  pageAnalysisResults.classList.add(
+    "hidden"
+  );
+
+  pageAnalysisEmpty.classList.add(
+    "hidden"
+  );
+
+  pageAnalysisPhoneList.innerHTML =
+    "";
+
+  pageAnalysisEmailList.innerHTML =
+    "";
+
+  pageAnalysisAddressList.innerHTML =
+    "";  
 
   resetUpiPhoneDisplay();
   resetWebsiteDisplay();
@@ -3505,3 +4213,168 @@ function showEmpty(
     "hidden"
   );
 }
+
+
+/*
+  ============================================================
+  analyze webpage 
+  ============================================================
+*/
+async function analyzeWebpage() {
+  analyzePageButton.disabled =
+    true;
+
+  analyzePageButton.textContent =
+    "Analyzing...";
+
+  /*
+    Show Webpage Analysis in the same result-card layout
+    used by Snapshot.
+  */
+  emptyState.classList.add(
+    "hidden"
+  );
+
+  resultCard.classList.remove(
+    "hidden"
+  );
+
+  resultHeading.textContent =
+    "Webpage Analysis";
+
+  /*
+    Hide all sections that belong to QR and Snapshot results.
+  */
+  paymentInfo.classList.add(
+    "hidden"
+  );
+
+  addressSection.classList.add(
+    "hidden"
+  );
+
+  pixSection.classList.add(
+    "hidden"
+  );
+
+  qrisSection.classList.add(
+    "hidden"
+  );
+
+  imageSection.classList.add(
+    "hidden"
+  );
+
+  rawPayloadSection.classList.add(
+    "hidden"
+  );
+
+  details.innerHTML =
+    "";
+
+  copyStatus.textContent =
+    "";
+
+  resetUpiPhoneDisplay();
+  resetWebsiteDisplay();
+  resetEmailDisplay();
+  resetContactDisplay();
+  resetEventDisplay();
+
+  renderPhoneDetails(
+    null
+  );
+
+  renderSmsDetails(
+    null
+  );
+
+  /*
+    Show only webpage-analysis output.
+  */
+  pageAnalysisSection.classList.remove(
+    "hidden"
+  );
+
+  pageAnalysisStatus.textContent =
+    "Reading webpage text...";
+
+  pageAnalysisResults.classList.add(
+    "hidden"
+  );
+
+  pageAnalysisEmpty.classList.add(
+    "hidden"
+  );
+
+  pageAnalysisPhoneList.innerHTML =
+    "";
+
+  pageAnalysisEmailList.innerHTML =
+    "";
+
+  pageAnalysisAddressList.innerHTML =
+    "";
+
+  try {
+    const tabs =
+      await browser.tabs.query({
+        active: true,
+        currentWindow: true
+      });
+
+    const tab =
+      tabs[0];
+
+    if (
+      !tab ||
+      !tab.id
+    ) {
+      throw new Error(
+        "No active webpage was found."
+      );
+    }
+
+    const response =
+      await browser.tabs.sendMessage(
+        tab.id,
+        {
+          type:
+            "ANALYZE_WEBPAGE"
+        }
+      );
+
+    if (
+      !response ||
+      !response.ok
+    ) {
+      throw new Error(
+        "The webpage did not return readable text."
+      );
+    }
+
+    renderPageAnalysis(
+      response.text ||
+      ""
+    );
+  } catch (error) {
+    pageAnalysisStatus.textContent =
+      error.message ||
+      "Analysis failed.";
+
+    pageAnalysisResults.classList.add(
+      "hidden"
+    );
+
+    pageAnalysisEmpty.classList.add(
+      "hidden"
+    );
+  } finally {
+    analyzePageButton.disabled =
+      false;
+
+    analyzePageButton.textContent =
+      "Analyze webpage";
+  }
+}
+

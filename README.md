@@ -1,36 +1,36 @@
 # Payment QR Tool
 
-Payment QR Tool is a Firefox browser extension that scans QR codes from webpages and extracts payment, wallet, website, email, phone, SMS, and contact information.
+Payment QR Tool is a Firefox browser extension that scans QR codes from webpages and extracts payment, wallet, website, email, phone, SMS, contact, and calendar information.
 
-The extension also includes Snapshot mode, which allows you to select part of a webpage and detect visible email addresses, phone numbers, URLs, and possible postal addresses.
+The extension also includes Snapshot mode. It allows you to select part of a webpage, capture the selected area, and detect visible email addresses, phone numbers, URLs, and possible postal addresses.
 
 ## Features
 
 - Scan QR codes from the current webpage.
 - Scan QR codes from a selected webpage area.
 - Highlight detected QR codes in screenshots.
+- Create a QR-only image crop.
 - Copy the highlighted screenshot.
-- Copy the QR-only image crop.
+- Copy the QR-only image.
 - Copy the raw decoded QR payload.
 - Extract UPI payment information.
 - Extract Pix payment information.
 - Extract QRIS merchant information.
-- Detect cryptocurrency wallet addresses.
+- Detect cryptocurrency wallet addresses and payment links.
 - Detect HTTP and HTTPS website QR codes.
 - Detect `mailto:` email QR codes.
 - Detect MATMSG email QR codes.
 - Detect `tel:` phone QR codes.
-- Format and validate phone numbers structurally.
-- Identify the country and calling code of international phone numbers.
 - Detect `sms:` and `SMSTO:` SMS QR codes.
+- Format and structurally validate phone numbers.
+- Identify phone-number countries and calling codes.
 - Detect vCard contact QR codes.
+- Detect MECARD contact QR codes.
+- Detect calendar event QR codes.
 - Display and copy individual decoded values.
 - Select a webpage area using Snapshot mode.
 - Detect emails, phone numbers, URLs, and possible addresses from Snapshot text.
-- Configure screenshot border spacing.
-- Configure screenshot border thickness.
-- Configure arrow size.
-- Configure arrow placement.
+- Configure screenshot border spacing, border thickness, arrow size, and arrow placement.
 
 ## Supported QR Information
 
@@ -49,7 +49,7 @@ It can display:
 - Amount.
 - Currency.
 - Payment note.
-- Phone number when an Indian mobile number can be extracted from the UPI ID.
+- A phone number when an Indian mobile number can be extracted from the UPI ID.
 
 ### Pix
 
@@ -117,11 +117,9 @@ The extension displays:
 - Path.
 - Query parameters.
 
-The complete URL can be copied or opened in a new browser tab.
+The complete URL can be copied or opened manually in a new browser tab. The extension does not automatically open decoded website URLs.
 
-HTTP URLs display a warning because they do not use HTTPS.
-
-Opening a website is always a manual action. The extension does not automatically open decoded website URLs.
+HTTP URLs display a warning because they do not use HTTPS. HTTPS does not guarantee that a website is trustworthy, so verify the domain before opening it.
 
 ### Email QR Codes
 
@@ -133,15 +131,13 @@ Example:
 mailto:person@example.com?subject=Hello&body=Test%20message
 ```
 
-It can display:
+It can display and copy:
 
 - Recipient.
 - CC recipients.
 - BCC recipients.
 - Subject.
 - Message body.
-
-Each available email field can be copied separately.
 
 #### MATMSG
 
@@ -153,7 +149,7 @@ Example:
 MATMSG:TO:person@example.com;SUB:Hello;BODY:Test message;;
 ```
 
-It can display:
+It can display and copy:
 
 - Recipient.
 - Subject.
@@ -191,9 +187,7 @@ Validation: Structurally valid
 
 Phone-number validation is structural only. It does not confirm that the number is active, reachable, or owned by a particular person.
 
-If the number does not include an international country code, the country may not be identifiable reliably.
-
-The extension does not automatically call the decoded phone number.
+If the number does not include an international country code, the country may not be identifiable reliably. The extension does not automatically call the decoded phone number.
 
 ### SMS QR Codes
 
@@ -203,13 +197,11 @@ The extension supports SMS QR payloads using these formats:
 sms:+919876543210?body=Hello%20from%20QR
 ```
 
-and:
-
 ```text
 SMSTO:+919876543210:Hello from QR
 ```
 
-It can display:
+It can display and copy:
 
 - SMS recipient.
 - Formatted phone number.
@@ -251,7 +243,24 @@ It can display and copy:
 - Website.
 - Note.
 
-MECARD contact support may be added in a future update.
+The extension also supports compact MECARD contact payloads, including names, organizations, telephone numbers, email addresses, addresses, websites, and notes.
+
+### Calendar Event QR Codes
+
+The extension supports iCalendar and VEVENT QR payloads.
+
+It can display and copy:
+
+- Event title.
+- Start time.
+- End time.
+- Location.
+- Description.
+- Organizer.
+- Event URL.
+- Event UID when available.
+
+Calendar information is displayed only. The extension does not automatically add events to the user’s calendar.
 
 ## Snapshot Mode
 
@@ -266,23 +275,23 @@ The extension creates:
 - Detected URLs and domains.
 - Possible postal addresses.
 
-The Snapshot feature does not automatically copy webpage text to the clipboard.
+Snapshot text is displayed in the popup and is not automatically copied to the clipboard.
 
 Press `Escape` while selecting an area to cancel Snapshot mode.
 
-Snapshot address detection is pattern-based. It may produce false positives or fail to recognize some address formats.
+Snapshot detection is pattern-based. It may produce false positives or fail to recognize some address, phone, URL, or email formats.
 
 ## Keyboard Shortcuts
 
-The default keyboard shortcuts are:
+The current default shortcuts declared in `manifest.json` are:
 
 | Shortcut | Action |
 |---|---|
-| `Ctrl+Shift+S` | Scan a QR code on the current webpage |
-| `Ctrl+Shift+P` | Start Snapshot selection |
-| `Ctrl+Shift+X` | Clear the latest scan or Snapshot result |
+| `Alt+Shift+A` | Scan a QR code on the current webpage |
+| `Alt+A` | Start Snapshot selection |
+| `Alt+X` | Clear the latest scan or Snapshot result |
 
-Firefox may require a shortcut to be changed from the Extensions Shortcuts settings page if the default combination conflicts with another application or browser feature.
+Firefox may allow these shortcuts to be customized from **Extensions → Manage Extension Shortcuts**. A shortcut can fail to work when it conflicts with Firefox, the operating system, another extension, or another application. The `suggested_key` value in the manifest is a default suggestion, not a guaranteed override.
 
 ## Installation for Development
 
@@ -294,10 +303,12 @@ Firefox may require a shortcut to be changed from the Extensions Shortcuts setti
    ```
 
 3. Select **Load Temporary Add-on**.
-4. Choose the `manifest.json` file from the project directory.
+4. Choose the project’s `manifest.json` file.
 5. Open a webpage containing a QR code.
 6. Click the Payment QR Tool toolbar button.
 7. Select **Scan QR** or **Snapshot**.
+
+After changing project files, return to the temporary add-ons page and click **Reload** for the extension.
 
 The extension currently uses Manifest V2 and a persistent background HTML page.
 
@@ -324,17 +335,17 @@ Payment QR Tool/
 
 | File | Purpose |
 |---|---|
-| `manifest.json` | Defines the extension, permissions, scripts, popup, options page, and keyboard shortcuts |
-| `background.html` | Loads the QR decoder, phone-number library, and background script |
-| `background.js` | Captures screenshots, decodes QR codes, parses payloads, extracts information, and stores results |
-| `content.js` | Handles Snapshot area selection and webpage notifications |
-| `popup/popup.html` | Defines the popup interface and result sections |
-| `popup/popup.css` | Styles the popup interface |
-| `popup/popup.js` | Displays results and handles copy and open actions |
-| `options.html` | Defines the screenshot settings page |
-| `options.js` | Saves settings and draws the live preview |
-| `libs/jsQR.js` | Decodes QR codes from image data |
-| `libs/libphonenumber.min.js` | Parses, formats, identifies, and structurally validates international phone numbers |
+| `manifest.json` | Defines the extension, permissions, scripts, popup, options page, and keyboard shortcuts. |
+| `background.html` | Loads the QR decoder, phone-number library, and background script. |
+| `background.js` | Captures screenshots, decodes QR codes, parses payloads, extracts information, generates images, and stores results. |
+| `content.js` | Handles Snapshot area selection, selected-page text detection support, and webpage notifications. |
+| `popup/popup.html` | Defines the popup interface and result sections. |
+| `popup/popup.css` | Styles the popup interface. |
+| `popup/popup.js` | Displays results and handles copy, clear, and website-open actions. |
+| `options.html` | Defines the screenshot settings page. |
+| `options.js` | Saves settings and draws the live preview. |
+| `libs/jsQR.js` | Decodes QR codes from image data. |
+| `libs/libphonenumber.min.js` | Parses, formats, identifies, and structurally validates phone numbers. |
 
 ## Screenshot Settings
 
@@ -345,7 +356,7 @@ The options page provides these settings:
 - Arrow size: `0.03` to `0.30`.
 - Arrow side: Automatic, left, or right.
 
-Settings are saved using browser local storage.
+Settings are saved using browser local storage. `background.js` reads them when generating highlighted QR and Snapshot images.
 
 ## Result Storage
 
@@ -365,14 +376,14 @@ The result may include:
 - QR-only image crop.
 - Snapshot text detections.
 
-Selecting **Clear result** removes the saved result.
+Selecting **Clear result** removes the saved result and resets the popup display.
 
 ## Required Permissions
 
 The extension requests these permissions:
 
 - `activeTab` for interacting with the active webpage.
-- `tabs` for accessing the current tab and opening website URLs.
+- `tabs` for accessing the current tab, capturing screenshots, and opening website URLs.
 - `<all_urls>` for running the content script on webpages.
 - `clipboardWrite` for copying extracted information.
 - `storage` for saving settings and the latest result.
@@ -385,7 +396,7 @@ The extension does not require an external server to decode QR codes or parse su
 
 Decoded results and screenshot data may be stored temporarily in the browser’s local extension storage until the result is cleared or replaced.
 
-The extension may access the active webpage and its visible screenshot when the user starts scanning or Snapshot mode.
+The extension may access the active webpage and capture its visible area when the user starts QR scanning or Snapshot mode.
 
 Do not share sensitive QR screenshots or decoded payment information publicly.
 
@@ -401,7 +412,7 @@ Do not share sensitive QR screenshots or decoded payment information publicly.
 - Some webpages, browser-protected pages, PDF viewers, or restricted frames may not be accessible.
 - Image clipboard support depends on browser support and permissions.
 - The extension does not send payments, place calls, send SMS messages, or save contacts automatically.
-- MECARD, Wi-Fi, location, calendar, and other QR formats are not currently parsed as dedicated result types.
+- Wi-Fi, geographic-location, and some other specialized QR formats are not currently parsed as dedicated result types.
 - The extension should be tested before it is used with important payment or contact information.
 
 ## Safety Notice
@@ -435,6 +446,21 @@ This project uses local third-party libraries.
 
 Keep the original license and attribution notices for each third-party library included in the project.
 
+## Testing Checklist
+
+- Load the extension without manifest or resource errors.
+- Confirm that the popup opens and shows the empty state.
+- Scan a visible UPI QR code and verify the UPI ID, raw payload, copy action, and generated images.
+- Scan Pix and QRIS QR codes and verify merchant fields.
+- Test cryptocurrency, website, email, phone, SMS, contact, MECARD, and calendar payloads.
+- Test Snapshot by dragging in both directions.
+- Press `Escape` during Snapshot selection and verify that it cancels.
+- Verify selected text and detected items in the popup.
+- Test image-copy buttons where Firefox clipboard support is available.
+- Save each options value and confirm that it affects generated screenshots.
+- Test shortcuts from Firefox’s extension shortcut manager.
+- Clear the result and confirm that stored data and displayed sections reset.
+
 ## License
 
-Add the project license information here.
+Add the project license information here before publishing or distributing the extension.

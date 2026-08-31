@@ -48,7 +48,6 @@ let selectionBox =
     Displays a payment result on the webpage.
   ============================================================
 */
-
 browser.runtime.onMessage.addListener(
   (message) => {
     if (
@@ -102,9 +101,27 @@ browser.runtime.onMessage.addListener(
       return false;
     }
 
+    if (
+      message.type ===
+      "ANALYZE_WEBPAGE"
+    ) {
+      const text =
+        collectPageText();
+
+      console.log(
+        "[content] Page analysis text length:",
+        text.length
+      );
+
+      return Promise.resolve({
+        ok: true,
+        text
+      });
+    }
     return false;
   }
 );
+
 
 
 /*
@@ -270,13 +287,10 @@ function handleSelectionMove(
   event.preventDefault();
 }
 
-function handleSelectionEnd(
-  event
-) {
+function handleSelectionEnd(event) {
   if (
     !selectionBox ||
-    selectionBox.style.display !==
-      "block"
+    selectionBox.style.display !== "block"
   ) {
     return;
   }
@@ -288,36 +302,28 @@ function handleSelectionEnd(
     );
 
   if (
-    selection.width <
-      10 ||
-    selection.height <
-      10
+    selection.width < 10 ||
+    selection.height < 10
   ) {
     cancelSnapshotSelection();
-
     return;
   }
 
-  /*
-    Important:
-    We do not copy anything here.
-
-    We only collect text from the selected area so that the
-    popup can detect emails, phones, URLs, and addresses.
-  */
   const selectedText =
     extractTextFromArea(
       selection
     );
 
+  console.log(
+    "[content] Snapshot selected text:",
+    selectedText
+  );
+
   removeSelectionOverlay();
 
   browser.runtime.sendMessage({
-    type:
-      "SNAPSHOT_SELECTION",
-
+    type: "SNAPSHOT_SELECTION",
     selection,
-
     selectedText
   });
 
@@ -409,106 +415,134 @@ function getSelectionRectangle(
 
 /*
   ============================================================
-  6. Extract text from the selected area
-  ------------------------------------------------------------
-  This is the main fix.
-
-  The old version examined every element, including parent
-  elements and their children. That caused the same text to
-  be collected many times.
-
-  The new version:
-    - Ignores the Snapshot overlay.
-    - Ignores hidden elements.
-    - Uses only visible text-bearing elements.
-    - Skips elements that contain another suitable text
-      element.
-    - Keeps only text that overlaps the selected rectangle.
-    - Removes duplicate text.
-    - Does not copy anything to the clipboard.
+  analysize webpage 
+ 
   ============================================================
 */
 
-function extractTextFromArea(
-  selection
-) {
-  const selectedParts =
-    [];
+function extractTextFromArea(selection) {
+  const selectedParts = [];
+  const root = document.body;
 
-  const elements =
-    document.querySelectorAll(
-      "body *"
+  if (!root) {
+    return "";
+  }
+
+  const walker =
+    document.createTreeWalker(
+      root,
+      NodeFilter.SHOW_TEXT
     );
 
-  elements.forEach(
-    (element) => {
-      if (
-        shouldIgnoreElement(
-          element
-        )
-      ) {
-        return;
-      }
+  let node;
 
-      const rect =
-        element.getBoundingClientRect();
+  while (
+    (node = walker.nextNode())
+  ) {
+    const text =
+      node.nodeValue
+        .replace(/\s+/g, " ")
+        .trim();
 
-      if (
-        !isVisibleElement(
-          element,
-          rect
-        )
-      ) {
-        return;
-      }
-
-      if (
-        !rectOverlapsSelection(
-          rect,
-          selection
-        )
-      ) {
-        return;
-      }
-
-      /*
-        If this element contains another visible text element,
-        use the smaller text element instead of collecting the
-        entire parent block.
-      */
-      if (
-        containsTextChild(
-          element
-        )
-      ) {
-        return;
-      }
-
-      const text =
-        getElementText(
-          element
-        );
-
-      if (
-        !text
-      ) {
-        return;
-      }
-
-      selectedParts.push(
-        text
-      );
+    if (!text) {
+      continue;
     }
-  );
+
+    const parent =
+      node.parentElement;
+
+    if (
+      !parent ||
+      shouldIgnoreElement(parent)
+    ) {
+      continue;
+    }
+
+    const range =
+      document.createRange();
+
+    range.selectNodeContents(node);
+
+    const rectangles =
+      Array.from(
+        range.getClientRects()
+      );
+
+    const overlaps =
+      rectangles.some(
+        (rect) =>
+          rect.right >
+            selection.left &&
+          rect.left <
+            selection.left +
+              selection.width &&
+          rect.bottom >
+            selection.top &&
+          rect.top <
+            selection.top +
+              selection.height
+      );
+
+    if (!overlaps) {
+      continue;
+    }
+
+    selectedParts.push(text);
+  }
 
   return [
-    ...new Set(
-      selectedParts
-    )
-  ].join(
-    "\n"
-  );
+    ...new Set(selectedParts)
+  ].join("\n");
 }
+
+
+
+
+
+function analyzeCurrentWebpage() {
+  const text =
+    getReadablePageText();
+
+  return {
+    ok: true,
+    text
+  };
+}
+
+function getReadablePageText() {
+  const clone =
+    document.body.cloneNode(
+      true
+    );
+
+  clone
+    .querySelectorAll(
+      "script, style, noscript, template, svg, canvas, input, textarea, select, option, iframe"
+    )
+    .forEach(
+      (element) => {
+        element.remove();
+      }
+    );
+
+  return (
+    clone.innerText ||
+    clone.textContent ||
+    ""
+  )
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+
+
+
+
+
+
+
+
+
 
 
 /*
@@ -595,7 +629,22 @@ function isVisibleElement(
   ) {
     return false;
   }
+  
+  /*
+    Ignore elements outside the currently visible browser viewport.
+  */
+  const insideViewport =
+    rect.bottom > 0 &&
+    rect.right > 0 &&
+    rect.top < window.innerHeight &&
+    rect.left < window.innerWidth;
 
+  if (
+    !insideViewport
+  ) {
+    return false;
+  }
+  
   return true;
 }
 
@@ -983,4 +1032,78 @@ function showMessage(
     },
     3500
   );
+}
+
+function collectPageText() {
+  const parts = [];
+  const seen = new Set();
+
+  const root =
+    document.body ||
+    document.documentElement;
+
+  if (
+    !root
+  ) {
+    return "";
+  }
+
+  const walker =
+    document.createTreeWalker(
+      root,
+      NodeFilter.SHOW_TEXT
+    );
+
+  let node;
+
+  while (
+    (node = walker.nextNode())
+  ) {
+    const parent =
+      node.parentElement;
+
+    if (
+      !parent ||
+      shouldIgnoreElement(parent)
+    ) {
+      continue;
+    }
+
+    const rect =
+      parent.getBoundingClientRect();
+
+    if (
+      !isVisibleElement(
+        parent,
+        rect
+      )
+    ) {
+      continue;
+    }
+
+    const text =
+      node.nodeValue
+        .replace(/\s+/g, " ")
+        .trim();
+
+    if (
+      !text
+    ) {
+      continue;
+    }
+
+    const key =
+      text.toLowerCase();
+
+    if (
+      seen.has(key)
+    ) {
+      continue;
+    }
+
+    seen.add(key);
+    parts.push(text);
+  }
+
+  return parts.join("\n");
 }

@@ -378,6 +378,12 @@ async function captureSnapshotSelection(
   message,
   tabId
 ) {
+  
+  console.log(
+    "[background] Received snapshot message:",
+    message
+  );
+  
   try {
     const tab =
       await browser.tabs.get(
@@ -404,8 +410,16 @@ async function captureSnapshotSelection(
       
     result.selectedText =
       message.selectedText ||
-      "";  
-
+      "";
+    console.log(
+      "[background] Snapshot selected text:",
+      JSON.stringify(
+        result.selectedText
+      )
+    );    
+    result.detectedText =
+      result.selectedText;
+      
     result.ok =
       true;
 
