@@ -52,6 +52,7 @@
       >
         Analyze webpage
       </button>
+        
 
       <button
         id="clearButton"
@@ -105,9 +106,56 @@
               <div class="detected-label">
                 Mobile / phone numbers
               </div>
+                  
 
               <div
                 id="pageAnalysisPhoneList"
+                class="detected-list"
+              ></div>
+            </div>
+            
+            <div
+              id="pageAnalysisPossiblePhones"
+              class="detected-group hidden"
+            >
+              <div class="detected-label">
+                Possible unformatted phone numbers
+              </div>
+
+              <div
+                id="pageAnalysisPossiblePhoneList"
+                class="detected-list"
+              ></div>
+
+              <div class="page-analysis-note">
+                These values match a phone-number pattern but were not explicitly formatted as phone numbers on the webpage.
+              </div>
+            </div>
+                              
+            <div
+              id="pageAnalysisDomains"
+              class="detected-group hidden"
+            >
+              <div class="detected-label">
+                Domains
+              </div>
+
+              <div
+                id="pageAnalysisDomainList"
+                class="detected-list"
+              ></div>
+            </div>
+
+            <div
+              id="pageAnalysisUrls"
+              class="detected-group hidden"
+            >
+              <div class="detected-label">
+                URLs
+              </div>
+
+              <div
+                id="pageAnalysisUrlList"
                 class="detected-list"
               ></div>
             </div>
@@ -748,12 +796,45 @@
                 ></div>
               </div>
 
+               <div
+                id="detectedPossiblePhones"
+                class="detected-group hidden"
+              >
+                <div class="detected-label">
+                  Possible unformatted phone numbers
+                </div>
+
+                <div
+                  id="possiblePhoneList"
+                  class="detected-list"
+                ></div>
+
+                <div class="page-analysis-note">
+                  These values match a phone-number pattern but were not explicitly formatted as phone numbers in the selected text.
+                </div>
+              </div>
+                
+
+              <div
+                id="detectedDomains"
+                class="detected-group hidden"
+              >
+                <div class="detected-label">
+                  Domains
+                </div>
+
+                <div
+                  id="domainList"
+                  class="detected-list"
+                ></div>
+              </div>
+
               <div
                 id="detectedUrls"
                 class="detected-group hidden"
               >
                 <div class="detected-label">
-                  URLs and domains
+                  URLs
                 </div>
 
                 <div

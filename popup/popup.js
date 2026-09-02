@@ -29,6 +29,21 @@ const pageAnalysisPhones =
     "pageAnalysisPhones"
   );
 
+const pageAnalysisPossiblePhones =
+  document.getElementById(
+    "pageAnalysisPossiblePhones"
+  );
+
+const pageAnalysisDomains =
+  document.getElementById(
+    "pageAnalysisDomains"
+  );
+
+const pageAnalysisUrls =
+  document.getElementById(
+    "pageAnalysisUrls"
+  );
+
 const pageAnalysisEmails =
   document.getElementById(
     "pageAnalysisEmails"
@@ -42,6 +57,21 @@ const pageAnalysisAddresses =
 const pageAnalysisPhoneList =
   document.getElementById(
     "pageAnalysisPhoneList"
+  );
+
+const pageAnalysisPossiblePhoneList =
+  document.getElementById(
+    "pageAnalysisPossiblePhoneList"
+  );
+
+const pageAnalysisDomainList =
+  document.getElementById(
+    "pageAnalysisDomainList"
+  );
+
+const pageAnalysisUrlList =
+  document.getElementById(
+    "pageAnalysisUrlList"
   );
 
 const pageAnalysisEmailList =
@@ -676,6 +706,16 @@ const detectedPhones =
     "detectedPhones"
   );
 
+const detectedPossiblePhones =
+  document.getElementById(
+    "detectedPossiblePhones"
+  );
+
+const detectedDomains =
+  document.getElementById(
+    "detectedDomains"
+  );
+
 const detectedUrls =
   document.getElementById(
     "detectedUrls"
@@ -694,6 +734,16 @@ const emailList =
 const phoneList =
   document.getElementById(
     "phoneList"
+  );
+
+const possiblePhoneList =
+  document.getElementById(
+    "possiblePhoneList"
+  );
+
+const domainList =
+  document.getElementById(
+    "domainList"
   );
 
 const urlList =
@@ -1585,22 +1635,57 @@ function showCopyStatus(
   ============================================================
 */
 
-function renderPageAnalysis(text) {
+function renderPageAnalysis(
+  text,
+  pageLinks = []
+) {
   const emails =
     extractEmails(text);
 
   const phones =
     extractPhones(text);
 
+  const possiblePhones =
+    extractPossibleUnformattedPhones(
+      text,
+      phones
+    );
+
+  const textWebValues =
+    extractUrls(text);
+
+  const webValues =
+    uniqueValues([
+      ...textWebValues,
+      ...pageLinks
+    ]);
+
+  const {
+    domains,
+    urls
+  } =
+    splitDomainsAndUrls(
+      webValues
+    );
+
   const addresses =
     extractAddresses(
       text,
       emails,
       phones,
-      []
+      webValues
     );
 
   pageAnalysisPhoneList.innerHTML =
+    "";
+
+  pageAnalysisPossiblePhoneList.innerHTML =
+    "";
+
+  pageAnalysisDomainList.innerHTML =
+    "";
+
+  pageAnalysisUrlList.innerHTML =
     "";
 
   pageAnalysisEmailList.innerHTML =
@@ -1615,6 +1700,31 @@ function renderPageAnalysis(text) {
       phone.display,
       "Copy phone",
       phone.copyValue
+    );
+  });
+
+  possiblePhones.forEach((phone) => {
+    addDetectedItem(
+      pageAnalysisPossiblePhoneList,
+      phone,
+      "Copy candidate",
+      phone
+    );
+  });
+
+  domains.forEach((domain) => {
+    addDetectedItem(
+      pageAnalysisDomainList,
+      domain,
+      "Copy domain"
+    );
+  });
+
+  urls.forEach((url) => {
+    addDetectedItem(
+      pageAnalysisUrlList,
+      url,
+      "Copy URL"
     );
   });
 
@@ -1636,12 +1746,30 @@ function renderPageAnalysis(text) {
 
   const hasResults =
     phones.length > 0 ||
+    possiblePhones.length > 0 ||
+    domains.length > 0 ||
+    urls.length > 0 ||
     emails.length > 0 ||
     addresses.length > 0;
 
   pageAnalysisPhones.classList.toggle(
     "hidden",
     phones.length === 0
+  );
+
+  pageAnalysisPossiblePhones.classList.toggle(
+    "hidden",
+    possiblePhones.length === 0
+  );
+
+  pageAnalysisDomains.classList.toggle(
+    "hidden",
+    domains.length === 0
+  );
+
+  pageAnalysisUrls.classList.toggle(
+    "hidden",
+    urls.length === 0
   );
 
   pageAnalysisEmails.classList.toggle(
@@ -1673,7 +1801,6 @@ function renderPageAnalysis(text) {
     "hidden"
   );
 }
-
 
 /*
   ============================================================
@@ -1709,7 +1836,18 @@ function renderResult(
 
     return;
   }
+  
+  if (
+    result.type ===
+    "page-analysis"
+  ) {
+    renderKeyboardPageAnalysis(
+      result
+    );
 
+    return;
+  }
+  
   renderRawPayload(
     result
   );
@@ -2894,9 +3032,23 @@ function renderDetectedItems(
       text
     );
 
-  const urls =
+  const possiblePhones =
+    extractPossibleUnformattedPhones(
+      text,
+      phones
+    );
+
+  const webValues =
     extractUrls(
       text
+    );
+
+  const {
+    domains,
+    urls
+  } =
+    splitDomainsAndUrls(
+      webValues
     );
 
   const addresses =
@@ -2904,13 +3056,19 @@ function renderDetectedItems(
       text,
       emails,
       phones,
-      urls
+      webValues
     );
 
   emailList.innerHTML =
     "";
 
   phoneList.innerHTML =
+    "";
+
+  possiblePhoneList.innerHTML =
+    "";
+
+  domainList.innerHTML =
     "";
 
   urlList.innerHTML =
@@ -2922,6 +3080,8 @@ function renderDetectedItems(
   const hasDetectedItems =
     emails.length > 0 ||
     phones.length > 0 ||
+    possiblePhones.length > 0 ||
+    domains.length > 0 ||
     urls.length > 0 ||
     addresses.length > 0;
 
@@ -2943,6 +3103,16 @@ function renderDetectedItems(
   detectedPhones.classList.toggle(
     "hidden",
     phones.length === 0
+  );
+
+  detectedPossiblePhones.classList.toggle(
+    "hidden",
+    possiblePhones.length === 0
+  );
+
+  detectedDomains.classList.toggle(
+    "hidden",
+    domains.length === 0
   );
 
   detectedUrls.classList.toggle(
@@ -2972,6 +3142,27 @@ function renderDetectedItems(
         phone.display,
         "Copy phone",
         phone.copyValue
+      );
+    }
+  );
+
+  possiblePhones.forEach(
+    (phone) => {
+      addDetectedItem(
+        possiblePhoneList,
+        phone,
+        "Copy candidate",
+        phone
+      );
+    }
+  );
+
+  domains.forEach(
+    (domain) => {
+      addDetectedItem(
+        domainList,
+        domain,
+        "Copy domain"
       );
     }
   );
@@ -3020,7 +3211,9 @@ function extractEmails(
 }
 
 
-function extractPhones(text) {
+function extractPhones(
+  text
+) {
   const matches =
     text.match(
       /(?:\+\d{1,3}[\s().-]*)?(?:\(?\d{2,5}\)?[\s.-]*)?\d(?:[\d\s().-]*\d)?/g
@@ -3029,279 +3222,399 @@ function extractPhones(text) {
   const phones = [];
   const seen = new Set();
 
-  matches.forEach((value) => {
-    const display =
-      cleanDetectedValue(value)
-        .replace(/\s+/g, " ")
-        .trim();
-
-    const digits =
-      display.replace(/\D/g, "");
-
-    if (
-      digits.length < 7 ||
-      digits.length > 15
-    ) {
-      return;
-    }
-    
-    /*
-      Reject two six-digit groups separated only by spaces.
-      These are commonly IDs, counters, or timestamps rather
-      than real telephone numbers.
-
-      Example rejected:
-      659020 114848
-    */
-    if (
-      /^\d{6}\s+\d{6}$/.test(
-        display
-      )
-    ) {
-      return;
-    }
-    
-    
-    /*
-      Reject sequences such as:
-      1 2 3 4 5 6 7 8 9
-      123456789
-      1-2-3-4-5-6-7-8-9
-    */
-    if (
-      /^(?:[1-9][\s.-]*){7,15}$/.test(
-        display
-      )
-    ) {
-      return;
-    }
-
-    /*
-      Reject ascending or descending digit sequences.
-    */
-    const isAscending =
-      digits.length >= 7 &&
-      digits
-        .split("")
-        .every(
-          (digit, index, array) =>
-            index === 0 ||
-            Number(digit) ===
-              Number(array[index - 1]) + 1
-        );
-
-    const isDescending =
-      digits.length >= 7 &&
-      digits
-        .split("")
-        .every(
-          (digit, index, array) =>
-            index === 0 ||
-            Number(digit) ===
-              Number(array[index - 1]) - 1
-        );
-
-    if (
-      isAscending ||
-      isDescending
-    ) {
-      return;
-    }
-
-    /*
-      Reject four-digit years and year ranges.
-    */
-    if (
-      /^\d{4}$/.test(display) ||
-      /^\d{4}\s*[-/]\s*\d{4}$/.test(
-        display
-      )
-    ) {
-      return;
-    }
-
-     /*
-      Reject amounts, prices, decimal values, and money-style text.
-
-      Examples:
-      555.00 50000
-      ₹555.00
-      $1,250.50
-      499.99
-    */
-    const looksLikeAmount =
-      /(?:₹|\$|€|£)?\s*\d{1,3}(?:,\d{3})*(?:\.\d{2})(?:\s+\d{1,6})?/.test(
-        display
-      );
-
-    if (
-      looksLikeAmount
-    ) {
-      return;
-    }
-
-    /*
-      A period is often a decimal separator. Allow it only when
-      the full value has obvious phone-number grouping, such as:
-      555.123.4567
-      +91.98765.43210
-    */
-    if (
-      display.includes(".") &&
-      !/^\+?\d{1,3}(?:[.\s-]\d{2,5}){2,4}$/.test(
-        display
-      )
-    ) {
-      return;
-    }
-
-    const hasInternationalPrefix =
-      /^\s*(?:\+|00)\d/.test(
-        display
-      );
-
-    const hasParentheses =
-      /[()]/.test(
-        display
-      );
-
-    const hasHyphen =
-      /-/.test(
-        display
-      );
-
-    const hasDot =
-      /\./.test(
-        display
-      );
-
-    const spaceGroups =
-      display
-        .trim()
-        .split(/\s+/)
-        .filter(
-          Boolean
-        );
-
-    /*
-      A short two-part value such as "20000 13" is usually an
-      amount, count, reference, or code—not a phone number.
-
-      Permit space-only formatting only when it has at least
-      three digit groups, such as:
-      98765 43210
-      020 7946 0958
-      +91 98765 43210
-    */
-    const hasSafeSpaceGrouping =
-      spaceGroups.length >=
-        3 &&
-      spaceGroups.every(
-        (group) =>
-          /^\d{2,5}$/.test(
-           group
+  matches.forEach(
+    (value) => {
+      const display =
+        cleanDetectedValue(
+          value
+        )
+          .replace(
+            /\s+/g,
+            " "
           )
-      ) &&
-      digits.length >=
-        10;
-    
-    /*
-      Reject likely date/time, counter, and ID formats.
+          .trim();
 
-      Examples rejected:
-      17062026 2029
-      659020 114848
-    */
-    const hasLongDateLikeGroup =
-      spaceGroups.some(
-        (group) =>
-          /^\d{8}$/.test(
-            group
-         ) ||
-          /^\d{6}$/.test(
-            group
+      if (
+        !display
+      ) {
+        return;
+      }
+
+      const digits =
+        display.replace(
+          /\D/g,
+          ""
+        );
+
+      /*
+        General international phone-number length range.
+      */
+      if (
+        digits.length < 7 ||
+        digits.length > 15
+      ) {
+        return;
+      }
+
+      /*
+        Reject short numeric OTP, PIN, verification, and
+        reference-code lengths.
+      */
+      if (
+        /^\d{4,6}$/.test(
+          digits
+        )
+      ) {
+        return;
+      }
+
+      /*
+        Reject two 6-digit groups such as:
+        659020 114848
+      */
+      if (
+        /^\d{6}\s+\d{6}$/.test(
+          display
+        )
+      ) {
+        return;
+      }
+
+      /*
+        Reject simple ascending/descending or separated
+        sequences such as:
+        1234567890
+        1 2 3 4 5 6 7 8 9
+        9876543210
+      */
+      if (
+        /^(?:[0-9][\s.-]*){7,15}$/.test(
+          display
+        )
+      ) {
+        const digitArray =
+          digits.split(
+            ""
+          );
+
+        const ascending =
+          digitArray.every(
+            (digit, index, array) =>
+              index === 0 ||
+              Number(digit) ===
+                Number(
+                  array[
+                    index - 1
+                  ]
+                ) + 1
+          );
+
+        const descending =
+          digitArray.every(
+            (digit, index, array) =>
+              index === 0 ||
+              Number(digit) ===
+                Number(
+                  array[
+                    index - 1
+                  ]
+                ) - 1
+          );
+
+        if (
+          ascending ||
+          descending
+        ) {
+          return;
+        }
+      }
+
+      /*
+        Reject 4-digit years and year ranges.
+      */
+      if (
+        /^\d{4}$/.test(
+          display
+        ) ||
+        /^\d{4}\s*[-/]\s*\d{4}$/.test(
+          display
+        )
+      ) {
+        return;
+      }
+
+      /*
+        Reject money/price/decimal formats.
+
+        Examples:
+        ₹555.00
+        $1,250.50
+        555.00 50000
+        499.99
+      */
+      const looksLikeAmount =
+        /(?:₹|\$|€|£)?\s*\d{1,3}(?:,\d{3})*(?:\.\d{2})(?:\s+\d{1,6})?/.test(
+          display
+        );
+
+      if (
+        looksLikeAmount
+      ) {
+        return;
+      }
+
+      /*
+        If dots are present, accept only a clear telephone
+        grouping format such as:
+        555.123.4567
+        +91.98765.43210
+      */
+      if (
+        display.includes(
+          "."
+        ) &&
+        !/^\+?\d{1,3}(?:[.\s-]\d{2,5}){2,4}$/.test(
+          display
+        )
+      ) {
+        return;
+      }
+
+      const hasInternationalPrefix =
+        /^\s*(?:\+|00)\d/.test(
+          display
+        );
+
+      const hasParentheses =
+        /[()]/.test(
+          display
+        );
+
+      const hasHyphen =
+        /-/.test(
+          display
+        );
+
+      const hasDot =
+        /\./.test(
+          display
+        );
+
+      const isIndianMobileTwoGroupFormat =
+        /^\s*[6-9]\d{4}\s\d{5}\s*$/.test(
+          display
+        );
+
+      const spaceGroups =
+        display
+          .split(
+            /\s+/
           )
+          .filter(
+            Boolean
+          );
+
+      /*
+        Allows clear phone groups such as:
+        020 7946 0958
+        +91 98765 43210
+        987 654 3210
+
+        Does not allow:
+        20000 13
+        17062026 2029
+      */
+      const hasSafeSpaceGrouping =
+        spaceGroups.length >=
+          3 &&
+        spaceGroups.every(
+          (group) =>
+            /^\+?\d{2,5}$/.test(
+              group
+            )
+        ) &&
+        digits.length >=
+          10;
+
+      const hasLongDateLikeGroup =
+        spaceGroups.some(
+          (group) =>
+            /^\d{6}$/.test(
+              group
+            ) ||
+            /^\d{8}$/.test(
+              group
+            )
+        );
+
+      const hasShortTrailingGroup =
+        spaceGroups.length >=
+          2 &&
+        /^\d{2,4}$/.test(
+          spaceGroups[
+            spaceGroups.length - 1
+          ]
+        );
+
+      if (
+        hasLongDateLikeGroup &&
+        hasShortTrailingGroup
+      ) {
+        return;
+      }
+
+      /*
+        Require a strong format indicator for detection.
+        A completely unformatted 10–15 digit string is not
+        treated as a phone number by itself, because it can
+        be an account ID, order number, timestamp, or URL path.
+      */
+      const hasStrongPhoneFormatting =
+        hasInternationalPrefix ||
+        hasParentheses ||
+        hasHyphen ||
+        hasDot ||
+        hasSafeSpaceGrouping ||
+        isIndianMobileTwoGroupFormat;
+
+      if (
+        !hasStrongPhoneFormatting
+      ) {
+        return;
+      }
+
+      const normalized =
+        display.replace(
+          /[^\d+]/g,
+          ""
+        );
+
+      if (
+        seen.has(
+          normalized
+        )
+      ) {
+        return;
+      }
+
+      seen.add(
+        normalized
       );
 
-    const hasShortTrailingGroup =
-      spaceGroups.length >=
-        2 &&
-      /^\d{2,4}$/.test(
-        spaceGroups[
-          spaceGroups.length - 1
-        ]
-      );
-
-    if (
-      hasLongDateLikeGroup &&
-      hasShortTrailingGroup
-    ) {
-      return;
+      phones.push({
+        display,
+        copyValue: display
+      });
     }
-    
-    const isIndianMobileTwoGroupFormat =
-      /^\s*[6-9]\d{4}\s\d{5}\s*$/.test(
-        display
-      );
-     
-    /*
-      Reject two groups of six digits with only a space.
-      This pattern is commonly a timestamp, ID, or counter,
-      not a normal telephone number.
-    */
-    if (
-      /^\d{6}\s+\d{6}$/.test(
-        display
-      )
-    ) {
-      return;
-    }
-     
-    /*
-      A phone candidate must have strong formatting evidence.
-      This prevents values such as "20000 13" from being treated
-      as phone numbers.
-    */
-    const isLikelyPhone =
-      hasInternationalPrefix ||
-      hasParentheses ||
-      hasHyphen ||
-      hasDot ||
-      hasSafeSpaceGrouping ||
-      isIndianMobileTwoGroupFormat ||
-      /^\d{10,15}$/.test(
-        digits
-      );
-
-    if (
-      !isLikelyPhone
-    ) {
-      return;
-    }
-    const normalized =
-      display.replace(
-        /[^\d+]/g,
-        ""
-      );
-
-    if (
-      seen.has(normalized)
-    ) {
-      return;
-    }
-
-    seen.add(normalized);
-
-    phones.push({
-      display,
-      copyValue: display
-    });
-  });
+  );
 
   return phones;
 }
 
+function extractPossibleUnformattedPhones(
+  text,
+  detectedPhones = []
+) {
+  const matches =
+    text.match(
+      /\b\d{12}\b/g
+    ) || [];
 
+  const alreadyDetected =
+    new Set(
+      detectedPhones.map(
+        (phone) =>
+          phone.copyValue.replace(
+            /\D/g,
+            ""
+          )
+      )
+    );
+
+  const possiblePhones =
+    [];
+  const seen =
+    new Set();
+
+  matches.forEach(
+    (value) => {
+      /*
+        Accept only a bare India international-mobile pattern:
+        91 + 10-digit mobile number beginning with 6–9.
+
+        Example accepted:
+        919652770411
+      */
+      if (
+        !/^91[6-9]\d{9}$/.test(
+          value
+        )
+      ) {
+        return;
+      }
+
+      if (
+        alreadyDetected.has(
+          value
+        ) ||
+        seen.has(
+          value
+        )
+      ) {
+        return;
+      }
+
+      /*
+        Reject simple ascending and descending digit sequences.
+      */
+      const digits =
+        value.split(
+          ""
+        );
+
+      const ascending =
+        digits.every(
+          (digit, index, array) =>
+            index === 0 ||
+            Number(digit) ===
+              Number(
+                array[
+                  index - 1
+                ]
+              ) + 1
+        );
+
+      const descending =
+        digits.every(
+          (digit, index, array) =>
+            index === 0 ||
+            Number(digit) ===
+              Number(
+                array[
+                  index - 1
+                ]
+              ) - 1
+        );
+
+      if (
+        ascending ||
+        descending
+      ) {
+        return;
+      }
+
+      seen.add(
+        value
+      );
+
+      possiblePhones.push(
+        value
+      );
+    }
+  );
+
+  return possiblePhones;
+}
 
 function extractUrls(text) {
   const matches =
@@ -3353,6 +3666,57 @@ function isRecognizedUrl(value) {
   } catch {
     return false;
   }
+}
+
+function splitDomainsAndUrls(
+  values
+) {
+  const domains =
+    [];
+
+  const urls =
+    [];
+
+  values.forEach(
+    (value) => {
+      const clean =
+        value.trim();
+
+      /*
+        Domain only:
+        - no http:// or https://
+        - no www.
+        - no path, query, or fragment
+        Examples:
+        XMX777.CC
+        example.com
+      */
+      const isDomainOnly =
+        /^(?:[a-z0-9-]+\.)+[a-z]{2,63}$/i.test(
+          clean
+        );
+
+      if (
+        isDomainOnly
+      ) {
+        domains.push(
+          clean
+        );
+      } else {
+        urls.push(
+          clean
+        );
+      }
+    }
+  );
+
+  return {
+    domains:
+      uniqueValues(domains),
+
+    urls:
+      uniqueValues(urls)
+  };
 }
 
 function extractAddresses(
@@ -4016,7 +4380,15 @@ function resetSnapshotVisibility() {
   detectedPhones.classList.add(
     "hidden"
   );
-
+  
+  detectedPossiblePhones.classList.add(
+    "hidden"
+  );
+  
+  detectedDomains.classList.add(
+    "hidden"
+  );
+  
   detectedUrls.classList.add(
     "hidden"
   );
@@ -4030,7 +4402,13 @@ function resetSnapshotVisibility() {
 
   phoneList.innerHTML =
     "";
-
+  
+  possiblePhoneList.innerHTML =
+    "";
+  
+  domainList.innerHTML =
+    "";
+  
   urlList.innerHTML =
     "";
 
@@ -4099,7 +4477,29 @@ function resetAllSections() {
 
   pageAnalysisPhoneList.innerHTML =
     "";
+  
+  pageAnalysisPossiblePhoneList.innerHTML =
+    "";
+  
+  
+  pageAnalysisPossiblePhones.classList.add(
+    "hidden"
+  );
+  
+  pageAnalysisDomains.classList.add(
+    "hidden"
+  );
 
+  pageAnalysisDomainList.innerHTML =
+    "";
+  
+  pageAnalysisUrls.classList.add(
+    "hidden"
+  );
+
+  pageAnalysisUrlList.innerHTML =
+    "";
+  
   pageAnalysisEmailList.innerHTML =
     "";
 
@@ -4309,7 +4709,28 @@ async function analyzeWebpage() {
 
   pageAnalysisPhoneList.innerHTML =
     "";
+  
+  pageAnalysisPossiblePhoneList.innerHTML =
+    "";
 
+  pageAnalysisPossiblePhones.classList.add(
+    "hidden"
+  );
+  
+  pageAnalysisDomains.classList.add(
+    "hidden"
+  );
+
+  pageAnalysisDomainList.innerHTML =
+    "";
+  
+  pageAnalysisUrls.classList.add(
+    "hidden"
+  );
+
+  pageAnalysisUrlList.innerHTML =
+    ""; 
+     
   pageAnalysisEmailList.innerHTML =
     "";
 
@@ -4352,10 +4773,17 @@ async function analyzeWebpage() {
         "The webpage did not return readable text."
       );
     }
-
+    
+    console.log(
+      "[popup] Webpage analysis response:",
+      response
+    );
+    
     renderPageAnalysis(
       response.text ||
-      ""
+      "",
+      response.links ||
+      []
     );
   } catch (error) {
     pageAnalysisStatus.textContent =
@@ -4376,5 +4804,70 @@ async function analyzeWebpage() {
     analyzePageButton.textContent =
       "Analyze webpage";
   }
+}
+
+function renderKeyboardPageAnalysis(
+  result
+) {
+  emptyState.classList.add(
+    "hidden"
+  );
+
+  resultCard.classList.remove(
+    "hidden"
+  );
+
+  resultHeading.textContent =
+    "Webpage Analysis";
+
+  paymentInfo.classList.add(
+    "hidden"
+  );
+
+  addressSection.classList.add(
+    "hidden"
+  );
+
+  pixSection.classList.add(
+    "hidden"
+  );
+
+  qrisSection.classList.add(
+    "hidden"
+  );
+
+  imageSection.classList.add(
+    "hidden"
+  );
+
+  rawPayloadSection.classList.add(
+    "hidden"
+  );
+
+  details.innerHTML =
+    "";
+
+  copyStatus.textContent =
+    "";
+
+  resetUpiPhoneDisplay();
+  resetWebsiteDisplay();
+  resetEmailDisplay();
+  resetContactDisplay();
+  resetEventDisplay();
+  resetSnapshotVisibility();
+
+  renderPhoneDetails(
+    null
+  );
+
+  renderSmsDetails(
+    null
+  );
+
+  renderPageAnalysis(
+    result.text ||
+    ""
+  );
 }
 

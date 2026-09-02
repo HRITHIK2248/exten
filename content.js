@@ -105,18 +105,29 @@ browser.runtime.onMessage.addListener(
       message.type ===
       "ANALYZE_WEBPAGE"
     ) {
-      const text =
+    const text =
         collectPageText();
 
+      const links =
+        collectPageLinks();
+      
+      console.log("[Link Collector] Returned links:", links.length, links.slice(0, 10));
+      
       console.log(
         "[content] Page analysis text length:",
         text.length
       );
 
+      console.log(
+        "[content] Page analysis link count:",
+        links.length
+      );
+
       return Promise.resolve({
         ok: true,
-        text
-      });
+        text,
+        links
+      }); 
     }
     return false;
   }
@@ -629,26 +640,29 @@ function isVisibleElement(
   ) {
     return false;
   }
-  
+
   /*
-    Ignore elements outside the currently visible browser viewport.
+    Analyze only content that overlaps the browser screen
+    at the moment Analyze webpage is clicked.
   */
-  const insideViewport =
-    rect.bottom > 0 &&
-    rect.right > 0 &&
-    rect.top < window.innerHeight &&
-    rect.left < window.innerWidth;
+  const overlapsViewport =
+    rect.bottom >
+      0 &&
+    rect.right >
+      0 &&
+    rect.top <
+      window.innerHeight &&
+    rect.left <
+      window.innerWidth;
 
   if (
-    !insideViewport
+    !overlapsViewport
   ) {
     return false;
   }
-  
+
   return true;
 }
-
-
 /*
   ============================================================
   9. Check rectangle overlap
@@ -1035,8 +1049,11 @@ function showMessage(
 }
 
 function collectPageText() {
-  const parts = [];
-  const seen = new Set();
+  const parts =
+    [];
+
+  const seen =
+    new Set();
 
   const root =
     document.body ||
@@ -1048,6 +1065,27 @@ function collectPageText() {
     return "";
   }
 
+  const ignoredSelector =
+    [
+      "script",
+      "style",
+      "noscript",
+      "template",
+      "svg",
+      "canvas",
+      "iframe",
+      "#__qr_snapshot_overlay__",
+      "#__qr_snapshot_selection__",
+      "#__qr_payment_message__"
+    ].join(
+      ","
+    );
+
+  /*
+    Read text from the complete document, including content
+    below the currently visible viewport. We do not use
+    getBoundingClientRect() or isVisibleElement() here.
+  */
   const walker =
     document.createTreeWalker(
       root,
@@ -1064,18 +1102,8 @@ function collectPageText() {
 
     if (
       !parent ||
-      shouldIgnoreElement(parent)
-    ) {
-      continue;
-    }
-
-    const rect =
-      parent.getBoundingClientRect();
-
-    if (
-      !isVisibleElement(
-        parent,
-        rect
+      parent.closest(
+        ignoredSelector
       )
     ) {
       continue;
@@ -1083,7 +1111,10 @@ function collectPageText() {
 
     const text =
       node.nodeValue
-        .replace(/\s+/g, " ")
+        .replace(
+          /\s+/g,
+          " "
+        )
         .trim();
 
     if (
@@ -1096,14 +1127,267 @@ function collectPageText() {
       text.toLowerCase();
 
     if (
-      seen.has(key)
+      seen.has(
+        key
+      )
     ) {
       continue;
     }
 
-    seen.add(key);
-    parts.push(text);
+    seen.add(
+      key
+    );
+
+    parts.push(
+      text
+    );
   }
 
-  return parts.join("\n");
+    /*
+    Include every normal web-link destination in the page.
+    link.href returns the browser-resolved absolute URL, so it
+    also captures relative href values such as /instagram.
+  */
+  root
+    .querySelectorAll(
+      "a[href], area[href]"
+    )
+    .forEach(
+      (link) => {
+        if (
+          link.closest(
+            ignoredSelector
+          )
+        ) {
+          return;
+        }
+
+        const href =
+          (
+            link.href ||
+            ""
+          )
+            .trim();
+
+        if (
+          !/^https?:\/\//i.test(
+            href
+          )
+        ) {
+          return;
+        }
+
+        const key =
+          href.toLowerCase();
+
+        if (
+          seen.has(
+            key
+          )
+        ) {
+          return;
+        }
+
+        seen.add(
+          key
+        );
+
+        parts.push(
+          href
+        );
+      }
+    );
+
+  /*
+    Also include explicit telephone and email link values.
+    They are not placed in the URL list, but allow your normal
+    phone/email extraction to inspect them.
+  */
+  root
+    .querySelectorAll(
+      'a[href^="tel:"], a[href^="mailto:"]'
+    )
+    .forEach(
+      (link) => {
+        if (
+          link.closest(
+            ignoredSelector
+          )
+        ) {
+          return;
+        }
+
+        const rawHref =
+          (
+            link.getAttribute(
+              "href"
+            ) ||
+            ""
+          )
+            .trim();
+
+        const value =
+          rawHref
+            .replace(
+              /^tel:/i,
+              ""
+            )
+            .replace(
+              /^mailto:/i,
+              ""
+            )
+            .trim();
+
+        if (
+          !value
+        ) {
+          return;
+        }
+
+        const key =
+          value.toLowerCase();
+
+        if (
+          seen.has(
+            key
+          )
+        ) {
+          return;
+        }
+
+        seen.add(
+          key
+        );
+
+        parts.push(
+          value
+        );
+      }
+    );
+  return parts.join(
+    "\n"
+  );
+}
+
+
+function collectTelegramLinks() {
+  const telegramLinks = new Set();
+
+  function searchForTelegramUrl(value) {
+    if (typeof value !== "string") {
+      return;
+    }
+
+    const matches = value.match(
+      /https?:\/\/(?:t\.me|telegram\.me|telegram\.dog)\/[^\s"'<>\\]+/gi
+    );
+
+    if (matches) {
+      for (const url of matches) {
+        telegramLinks.add(url.replace(/[),.;]+$/, ""));
+      }
+    }
+  }
+
+  // Search visible page HTML for Telegram URLs.
+  searchForTelegramUrl(document.documentElement.innerHTML);
+
+  // Search inline scripts, if the site placed a URL there.
+  for (const script of document.scripts) {
+    searchForTelegramUrl(script.textContent || "");
+  }
+
+  return [...telegramLinks];
+}
+
+
+function collectPageLinks() {
+  const links = new Set();
+  const scannedDocuments = new Set();
+
+  function scanDocument(doc, sourceName = "page") {
+    // Do not scan the same page twice.
+    if (!doc || scannedDocuments.has(doc)) {
+      return;
+    }
+
+    scannedDocuments.add(doc);
+
+    // Collect normal links from this document.
+    const anchors = doc.querySelectorAll("a[href]");
+
+    console.log(
+      `[Link Collector] ${sourceName}: found ${anchors.length} links`
+    );
+
+    for (const anchor of anchors) {
+      const href = anchor.href?.trim();
+
+      if (
+        href &&
+        (href.startsWith("https://") || href.startsWith("http://"))
+      ) {
+        links.add(href);
+      }
+    }
+
+    // Look for iframes/frames inside this document.
+    const frames = doc.querySelectorAll("iframe, frame");
+
+    console.log(
+      `[Link Collector] ${sourceName}: found ${frames.length} frame(s)`
+    );
+
+    for (let index = 0; index < frames.length; index++) {
+      const frame = frames[index];
+
+      try {
+        const frameDocument = frame.contentDocument;
+
+        // If Firefox allows access, scan that embedded page too.
+        if (frameDocument) {
+          const frameUrl =
+            frameDocument.location?.href ||
+            frame.src ||
+            "unknown frame URL";
+
+          scanDocument(
+            frameDocument,
+            `${sourceName} → frame ${index}: ${frameUrl}`
+          );
+        }
+      } catch (error) {
+        // This normally happens for a frame from another website.
+        console.warn(
+          `[Link Collector] Cannot read frame ${index} inside ${sourceName}`,
+          error
+        );
+      }
+    }
+  }
+
+  // Begin with the main webpage. The function will then scan its frames,
+  // and frames within frames, when the browser permits it.
+  scanDocument(document, `main page: ${location.href}`);
+
+  // Add Telegram URLs that are stored in page configuration/JavaScript
+  // rather than normal <a href="..."> elements.
+  for (const telegramUrl of collectTelegramLinks()) {
+    links.add(telegramUrl);
+  }
+
+  const result = [...links];
+
+  console.log(
+    `[Link Collector] Total unique HTTP(S) links: ${result.length}`
+  );
+
+  console.log(
+    "[Link Collector] Telegram links found:",
+    result.filter((url) =>
+      /(?:t\.me|telegram\.me|telegram\.dog)/i.test(url)
+    )
+  );
+
+  return result;
 }

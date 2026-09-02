@@ -105,7 +105,58 @@ async function handleKeyboardCommand(
       return;
     }
 
+    /*
+      Analyze-webpage shortcut
 
+      Request the complete page text from content.js, store it
+      as a webpage-analysis result, and open the extension popup.
+    */
+    if (
+      command ===
+      "analyze-webpage"
+    ) {
+      const response =
+        await browser.tabs.sendMessage(
+          tab.id,
+          {
+            type:
+              "ANALYZE_WEBPAGE"
+          }
+        );
+
+      if (
+        !response ||
+        !response.ok
+      ) {
+        throw new Error(
+          "The webpage did not return readable text."
+        );
+      }
+
+      const result = {
+        ok: true,
+        type: "page-analysis",
+        network: "Webpage analysis",
+        text:
+          response.text ||
+          "",
+        scannedAt:
+          Date.now(),
+        copiedAutomatically:
+          false
+      };
+
+      await browser.storage.local.set({
+        latestResult: result
+      });
+
+      await openResultPopup(
+        tab
+      );
+
+      return;
+    }
+    
     /*
       Clear-result shortcut
 
