@@ -100,62 +100,120 @@
             class="detected-items hidden"
           >
             <div
-              id="pageAnalysisPhones"
+              id="pageAnalysisPhoneNumbers"
               class="detected-group hidden"
             >
               <div class="detected-label">
-                Mobile / phone numbers
-              </div>
-                  
-
-              <div
-                id="pageAnalysisPhoneList"
-                class="detected-list"
-              ></div>
-            </div>
-            
-            <div
-              id="pageAnalysisPossiblePhones"
-              class="detected-group hidden"
-            >
-              <div class="detected-label">
-                Possible unformatted phone numbers
+                Phone Numbers
               </div>
 
               <div
-                id="pageAnalysisPossiblePhoneList"
-                class="detected-list"
-              ></div>
+                id="pageAnalysisPhones"
+                class="web-links-item hidden"
+              >
+                <button
+                  id="pageAnalysisPhonesButton"
+                  class="social-media-platform-button"
+                  type="button"
+                >
+                  Detected phone numbers
+                </button>
 
-              <div class="page-analysis-note">
-                These values match a phone-number pattern but were not explicitly formatted as phone numbers on the webpage.
+                <div
+                  id="pageAnalysisPhoneList"
+                  class="detected-list web-links-details hidden"
+                ></div>
+              </div>
+
+              <div
+                id="pageAnalysisPossiblePhones"
+                class="web-links-item hidden"
+              >
+                <button
+                  id="pageAnalysisPossiblePhonesButton"
+                  class="social-media-platform-button"
+                  type="button"
+                >
+                  Possible phone numbers
+                </button>
+
+                <div
+                  id="pageAnalysisPossiblePhoneList"
+                  class="detected-list web-links-details hidden"
+                ></div>
+
+                <div class="page-analysis-note">
+                  These values look like phone numbers, but could not be confirmed as properly formatted phone numbers.
+                </div>
               </div>
             </div>
                               
+   
             <div
-              id="pageAnalysisDomains"
+              id="pageAnalysisWebLinks"
               class="detected-group hidden"
             >
               <div class="detected-label">
-                Domains
+                Web Links
               </div>
 
               <div
-                id="pageAnalysisDomainList"
-                class="detected-list"
-              ></div>
+                id="pageAnalysisDomains"
+                class="web-links-item hidden"
+              >
+                <button
+                  id="pageAnalysisDomainsButton"
+                  class="social-media-platform-button"
+                  type="button"
+                >
+                  Domains
+                </button>
+
+                <div
+                  id="pageAnalysisDomainList"
+                  class="detected-list web-links-details hidden"
+                ></div>
+              </div>
+
+              <div
+                id="pageAnalysisUrls"
+                class="web-links-item hidden"
+              >
+                <button
+                  id="pageAnalysisUrlsButton"
+                  class="social-media-platform-button"
+                  type="button"
+                >
+                  Website URLs
+                </button>
+
+                <div
+                  id="pageAnalysisUrlList"
+                  class="detected-list web-links-details hidden"
+                ></div>
+              </div>
+            </div>  
+
+
+              <button
+                id="showAllUrlsButton"
+                class="show-more-button hidden"
+                type="button"
+              >
+                Show all website URLs
+              </button>
             </div>
 
             <div
-              id="pageAnalysisUrls"
+              id="pageAnalysisSocialMedia"
               class="detected-group hidden"
             >
               <div class="detected-label">
-                URLs
+                Social Media
               </div>
 
               <div
-                id="pageAnalysisUrlList"
+                id="pageAnalysisSocialMediaList"
                 class="detected-list"
               ></div>
             </div>
@@ -164,13 +222,17 @@
               id="pageAnalysisEmails"
               class="detected-group hidden"
             >
-              <div class="detected-label">
-                Gmail / email addresses
-              </div>
+              <button
+                id="pageAnalysisEmailsButton"
+                class="social-media-platform-button"
+                type="button"
+              >
+                Email Addresses
+              </button>
 
               <div
                 id="pageAnalysisEmailList"
-                class="detected-list"
+                class="detected-list web-links-details hidden"
               ></div>
             </div>
 
@@ -178,16 +240,19 @@
               id="pageAnalysisAddresses"
               class="detected-group hidden"
             >
-              <div class="detected-label">
-                Possible addresses
-              </div>
+              <button
+                id="pageAnalysisAddressesButton"
+                class="social-media-platform-button"
+                type="button"
+              >
+                Potential Postal Addresses
+              </button>
 
               <div
                 id="pageAnalysisAddressList"
-                class="detected-list"
+                class="detected-list web-links-details hidden"
               ></div>
             </div>
-          </div>
 
           <div
             id="pageAnalysisEmpty"

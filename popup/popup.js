@@ -7,7 +7,10 @@
   ============================================================
 */
 
-
+const pageAnalysisAddressesButton =
+  document.getElementById(
+    "pageAnalysisAddressesButton"
+  );
 
 const pageAnalysisSection =
   document.getElementById(
@@ -72,6 +75,36 @@ const pageAnalysisDomainList =
 const pageAnalysisUrlList =
   document.getElementById(
     "pageAnalysisUrlList"
+  );
+
+const pageAnalysisWebLinks =
+  document.getElementById(
+    "pageAnalysisWebLinks"
+  );
+
+const pageAnalysisDomainsButton =
+  document.getElementById(
+    "pageAnalysisDomainsButton"
+  );
+
+const pageAnalysisUrlsButton =
+  document.getElementById(
+    "pageAnalysisUrlsButton"
+  );
+  
+const pageAnalysisSocialMedia =
+  document.getElementById(
+    "pageAnalysisSocialMedia"
+  );
+
+const pageAnalysisSocialMediaList =
+  document.getElementById(
+    "pageAnalysisSocialMediaList"
+  );
+
+const showAllUrlsButton =
+  document.getElementById(
+    "showAllUrlsButton"
   );
 
 const pageAnalysisEmailList =
@@ -802,6 +835,25 @@ const copyEventUrlButton =
     "copyEventUrlButton"
   );
 
+const pageAnalysisPhoneNumbers =
+  document.getElementById(
+    "pageAnalysisPhoneNumbers"
+  );
+
+const pageAnalysisPhonesButton =
+  document.getElementById(
+    "pageAnalysisPhonesButton"
+  );
+
+const pageAnalysisPossiblePhonesButton =
+  document.getElementById(
+    "pageAnalysisPossiblePhonesButton"
+  );
+
+const pageAnalysisEmailsButton =
+  document.getElementById(
+    "pageAnalysisEmailsButton"
+  );
 
 /*
   ============================================================
@@ -812,12 +864,18 @@ const copyEventUrlButton =
 let latestResult =
   null;
 
+let showAllWebsiteUrls =
+  false;
 
 /*
   ============================================================
   11. Button listeners
   ============================================================
 */
+
+
+
+
 
 copySelectedTextButton.addEventListener(
   "click",
@@ -990,6 +1048,65 @@ copyEventUrlButton.addEventListener(
     "Event URL copied."
   )
 );
+
+
+pageAnalysisDomainsButton.addEventListener(
+  "click",
+  () => {
+    pageAnalysisDomainList.classList.toggle(
+      "hidden"
+    );
+  }
+);
+
+pageAnalysisUrlsButton.addEventListener(
+  "click",
+  () => {
+    pageAnalysisUrlList.classList.toggle(
+      "hidden"
+    );
+  }
+);
+
+
+pageAnalysisPhonesButton.addEventListener(
+  "click",
+  () => {
+    pageAnalysisPhoneList.classList.toggle(
+      "hidden"
+    );
+  }
+);
+
+pageAnalysisPossiblePhonesButton.addEventListener(
+  "click",
+  () => {
+    pageAnalysisPossiblePhoneList.classList.toggle(
+      "hidden"
+    );
+  }
+);
+
+pageAnalysisEmailsButton.addEventListener(
+  "click",
+  () => {
+    pageAnalysisEmailList.classList.toggle(
+      "hidden"
+    );
+  }
+);
+
+pageAnalysisAddressesButton.addEventListener(
+  "click",
+  () => {
+    pageAnalysisAddressList.classList.toggle(
+      "hidden"
+    );
+  }
+);
+
+
+
 /*
   ============================================================
   12. Load saved result
@@ -1635,10 +1752,109 @@ function showCopyStatus(
   ============================================================
 */
 
+function addExpandableDetectedItems(
+  container,
+  values,
+  copyButtonText,
+  sectionName
+) {
+  const showMoreButton =
+    document.createElement(
+      "button"
+    );
+
+  showMoreButton.type =
+    "button";
+
+  showMoreButton.className =
+    "show-more-button";
+
+  const renderValues =
+    (items) => {
+      container.innerHTML =
+        "";
+
+      items.forEach(
+        (value) => {
+          addDetectedItem(
+            container,
+            value,
+            copyButtonText
+          );
+        }
+      );
+    };
+
+  const renderFirstThree =
+    () => {
+      renderValues(
+        values.slice(
+          0,
+          3
+        )
+      );
+
+      if (
+        values.length >
+        3
+      ) {
+        showMoreButton.textContent =
+          `Show remaining ${sectionName} (${values.length - 3})`;
+
+        container.appendChild(
+          showMoreButton
+        );
+      }
+    };
+
+  const renderAll =
+    () => {
+      renderValues(
+        values
+      );
+
+      showMoreButton.textContent =
+        `Show fewer ${sectionName}`;
+
+      container.appendChild(
+        showMoreButton
+      );
+    };
+
+  showMoreButton.addEventListener(
+    "click",
+    () => {
+      const showingAll =
+        showMoreButton.dataset.showingAll ===
+        "true";
+
+      if (
+        showingAll
+      ) {
+        showMoreButton.dataset.showingAll =
+          "false";
+
+        renderFirstThree();
+
+        return;
+      }
+
+      showMoreButton.dataset.showingAll =
+        "true";
+
+      renderAll();
+    }
+  );
+
+  renderFirstThree();
+}
+
 function renderPageAnalysis(
   text,
   pageLinks = []
 ) {
+
+    
   const emails =
     extractEmails(text);
 
@@ -1667,7 +1883,15 @@ function renderPageAnalysis(
     splitDomainsAndUrls(
       webValues
     );
-
+  
+  const {
+    websiteUrls,
+    socialMediaUrls
+  } =
+    splitSocialMediaUrls(
+      urls
+    );
+  
   const addresses =
     extractAddresses(
       text,
@@ -1675,7 +1899,10 @@ function renderPageAnalysis(
       phones,
       webValues
     );
-
+  
+  pageAnalysisSocialMediaList.innerHTML =
+    "";
+  
   pageAnalysisPhoneList.innerHTML =
     "";
 
@@ -1712,21 +1939,29 @@ function renderPageAnalysis(
     );
   });
 
-  domains.forEach((domain) => {
-    addDetectedItem(
-      pageAnalysisDomainList,
-      domain,
-      "Copy domain"
-    );
-  });
+  addExpandableDetectedItems(
+    pageAnalysisDomainList,
+    domains,
+    "Copy domain",
+    "domains"
+  );
 
-  urls.forEach((url) => {
-    addDetectedItem(
-      pageAnalysisUrlList,
-      url,
-      "Copy URL"
-    );
-  });
+  addExpandableDetectedItems(
+    pageAnalysisUrlList,
+    websiteUrls,
+    "Copy URL",
+    "URLs"
+  );
+
+  socialMediaUrls.forEach(
+    (socialLink) => {
+      addSocialMediaItem(
+        pageAnalysisSocialMediaList,
+        socialLink.platform,
+        socialLink.urls
+      );
+    }
+  );
 
   emails.forEach((email) => {
     addDetectedItem(
@@ -1748,7 +1983,8 @@ function renderPageAnalysis(
     phones.length > 0 ||
     possiblePhones.length > 0 ||
     domains.length > 0 ||
-    urls.length > 0 ||
+    websiteUrls.length > 0 ||
+    socialMediaUrls.length > 0 ||
     emails.length > 0 ||
     addresses.length > 0;
 
@@ -1761,6 +1997,18 @@ function renderPageAnalysis(
     "hidden",
     possiblePhones.length === 0
   );
+  
+  pageAnalysisPhoneNumbers.classList.toggle(
+    "hidden",
+    phones.length === 0 &&
+    possiblePhones.length === 0
+  );
+  
+  pageAnalysisWebLinks.classList.toggle(
+    "hidden",
+    domains.length === 0 &&
+    websiteUrls.length === 0
+  );
 
   pageAnalysisDomains.classList.toggle(
     "hidden",
@@ -1769,7 +2017,12 @@ function renderPageAnalysis(
 
   pageAnalysisUrls.classList.toggle(
     "hidden",
-    urls.length === 0
+    websiteUrls.length === 0
+  );
+
+  pageAnalysisSocialMedia.classList.toggle(
+    "hidden",
+    socialMediaUrls.length === 0
   );
 
   pageAnalysisEmails.classList.toggle(
@@ -3013,6 +3266,367 @@ function addDetectedItem(
   );
 }
 
+
+/*
+  ============================================================
+  social media items 
+  ============================================================
+*/
+
+function getSocialMediaDetails(
+  platform,
+  url
+) {
+  try {
+    
+    
+    const fullUrl =
+      /^https?:\/\//i.test(
+        url
+      )
+        ? url
+        : `https://${url}`;
+
+    const parsedUrl =
+      new URL(
+        fullUrl
+      );
+
+    const parts =
+      parsedUrl.pathname
+        .split(
+          "/"
+        )
+        .filter(
+          Boolean
+        );
+
+    const firstPart =
+      parts[0] ||
+      "";
+
+    if (
+      platform ===
+      "Telegram"
+    ) {
+      if (
+        firstPart ===
+        "joinchat"
+      ) {
+        const inviteCode =
+          parts[1] ||
+          "";
+
+        return {
+          label:
+            `Telegram invite: ${inviteCode}`,
+          value:
+            inviteCode
+        };
+      }
+
+      if (
+        firstPart.startsWith(
+          "+"
+        )
+      ) {
+        const inviteCode =
+          firstPart.slice(
+            1
+          );
+
+        return {
+          label:
+            `Telegram invite: ${inviteCode}`,
+          value:
+            inviteCode
+        };
+      }
+      
+      
+      
+      return {
+        label:
+          `@${firstPart}`,
+        value:
+          firstPart
+      };
+    }
+    
+    if (
+        platform ===
+        "Instagram"
+      ) {
+        return {
+          label:
+            `@${firstPart}`,
+          value:
+            firstPart
+        };
+      }
+    
+    return {
+      label:
+        firstPart ||
+        parsedUrl.hostname,
+
+      value:
+        firstPart ||
+        parsedUrl.hostname
+    };
+  } catch (
+    error
+  ) {
+    return {
+      label:
+        url,
+
+      value:
+        url
+    };
+  }
+}
+
+
+function addSocialMediaItem(
+  container,
+  platform,
+  urls
+) {
+  const item =
+    document.createElement(
+      "div"
+    );
+
+  item.className =
+    "social-media-item";
+
+  const platformButton =
+    document.createElement(
+      "button"
+    );
+
+  platformButton.type =
+    "button";
+
+  platformButton.className =
+    "social-media-platform-button";
+
+  platformButton.textContent =
+    `${platform} (${urls.length})`;
+
+  const details =
+    document.createElement(
+      "div"
+    );
+
+  details.className =
+    "social-media-details hidden";
+
+  const createSocialRow =
+    (url) => {
+      const socialDetails =
+        getSocialMediaDetails(
+          platform,
+          url
+        );
+
+      const row =
+        document.createElement(
+          "div"
+        );
+
+      row.className =
+        "social-media-link-row";
+
+      const identifier =
+        document.createElement(
+          "code"
+        );
+
+      identifier.className =
+        "detected-value";
+
+      identifier.textContent =
+        socialDetails.label;
+
+      const copyDetailsButton =
+        document.createElement(
+          "button"
+        );
+
+      copyDetailsButton.type =
+        "button";
+
+      copyDetailsButton.className =
+        "copy-button";
+
+      copyDetailsButton.textContent =
+        "Copy\ndetails";
+
+      copyDetailsButton.addEventListener(
+        "click",
+        () => {
+          copyText(
+            socialDetails.value,
+            copyDetailsButton
+          );
+        }
+      );
+
+      const copyUrlButton =
+        document.createElement(
+          "button"
+        );
+
+      copyUrlButton.type =
+        "button";
+
+      copyUrlButton.className =
+        "copy-button";
+
+      copyUrlButton.textContent =
+        "Copy\nURL";
+
+      copyUrlButton.addEventListener(
+        "click",
+        () => {
+          copyText(
+            url,
+            copyUrlButton
+          );
+        }
+      );
+
+      row.appendChild(
+        identifier
+      );
+
+      row.appendChild(
+        copyDetailsButton
+      );
+
+      row.appendChild(
+        copyUrlButton
+      );
+
+      return row;
+    };
+
+  const renderLinks =
+    (links) => {
+      details.innerHTML =
+        "";
+
+      links.forEach(
+        (url) => {
+          details.appendChild(
+            createSocialRow(
+              url
+            )
+          );
+        }
+      );
+    };
+
+  const renderFirstThree =
+    () => {
+      renderLinks(
+        urls.slice(
+          0,
+          3
+        )
+      );
+
+      if (
+        urls.length >
+        3
+      ) {
+        showMoreButton.textContent =
+          `Show remaining ${platform} links (${urls.length - 3})`;
+
+        details.appendChild(
+          showMoreButton
+        );
+      }
+    };
+
+  const renderAllLinks =
+    () => {
+      renderLinks(
+        urls
+      );
+
+      showMoreButton.textContent =
+        "Show fewer links";
+
+      details.appendChild(
+        showMoreButton
+      );
+    };
+
+  const showMoreButton =
+    document.createElement(
+      "button"
+    );
+
+  showMoreButton.type =
+    "button";
+
+  showMoreButton.className =
+    "show-more-button";
+
+  showMoreButton.addEventListener(
+    "click",
+    () => {
+      const showingAll =
+        showMoreButton.dataset.showingAll ===
+        "true";
+
+      if (
+        showingAll
+      ) {
+        showMoreButton.dataset.showingAll =
+          "false";
+
+        renderFirstThree();
+
+        return;
+      }
+
+      showMoreButton.dataset.showingAll =
+        "true";
+
+      renderAllLinks();
+    }
+  );
+
+  renderFirstThree();
+
+  platformButton.addEventListener(
+    "click",
+    () => {
+      details.classList.toggle(
+        "hidden"
+      );
+    }
+  );
+
+  item.appendChild(
+    platformButton
+  );
+
+  item.appendChild(
+    details
+  );
+
+  container.appendChild(
+    item
+  );
+}
+
+
+
 /*
   ============================================================
   29. Render Snapshot detections
@@ -3666,6 +4280,225 @@ function isRecognizedUrl(value) {
   } catch {
     return false;
   }
+}
+
+
+function getSocialMediaPlatform(
+  value
+) {
+  let candidate =
+    value
+      .trim();
+
+  if (
+    /^www\./i.test(
+      candidate
+    )
+  ) {
+    candidate =
+      `https://${candidate}`;
+  } else if (
+    !/^[a-z][a-z0-9+.-]*:\/\//i.test(
+      candidate
+    )
+  ) {
+    candidate =
+      `https://${candidate}`;
+  }
+
+  try {
+    const hostname =
+      new URL(
+        candidate
+      )
+        .hostname
+        .toLowerCase()
+        .replace(
+          /^www\./,
+          ""
+        );
+
+    if (
+      hostname === "t.me" ||
+      hostname.endsWith(
+        ".t.me"
+      ) ||
+      hostname === "telegram.me" ||
+      hostname.endsWith(
+        ".telegram.me"
+      ) ||
+      hostname === "telegram.org" ||
+      hostname.endsWith(
+        ".telegram.org"
+      )
+    ) {
+      return "Telegram";
+    }
+
+    if (
+      hostname === "instagram.com" ||
+      hostname.endsWith(
+        ".instagram.com"
+      )
+    ) {
+      return "Instagram";
+    }
+
+    if (
+      hostname === "facebook.com" ||
+      hostname.endsWith(
+        ".facebook.com"
+      ) ||
+      hostname === "fb.com" ||
+      hostname.endsWith(
+        ".fb.com"
+      ) ||
+      hostname === "fb.me" ||
+      hostname.endsWith(
+        ".fb.me"
+      )
+    ) {
+      return "Facebook";
+    }
+
+    if (
+      hostname === "wa.me" ||
+      hostname.endsWith(
+        ".wa.me"
+      ) ||
+      hostname === "whatsapp.com" ||
+      hostname.endsWith(
+        ".whatsapp.com"
+      )
+    ) {
+      return "WhatsApp";
+    }
+
+    if (
+      hostname === "youtube.com" ||
+      hostname.endsWith(
+        ".youtube.com"
+      ) ||
+      hostname === "youtu.be" ||
+      hostname.endsWith(
+        ".youtu.be"
+      )
+    ) {
+      return "YouTube";
+    }
+
+    if (
+      hostname === "tiktok.com" ||
+      hostname.endsWith(
+        ".tiktok.com"
+      )
+    ) {
+      return "TikTok";
+    }
+
+    if (
+      hostname === "x.com" ||
+      hostname.endsWith(
+        ".x.com"
+      ) ||
+      hostname === "twitter.com" ||
+      hostname.endsWith(
+        ".twitter.com"
+      )
+    ) {
+      return "X / Twitter";
+    }
+
+    if (
+      hostname === "discord.gg" ||
+      hostname.endsWith(
+        ".discord.gg"
+      ) ||
+      hostname === "discord.com" ||
+      hostname.endsWith(
+        ".discord.com"
+      )
+    ) {
+      return "Discord";
+    }
+  } catch {
+    return "";
+  }
+
+  return "";
+}
+
+function splitSocialMediaUrls(
+  urls
+) {
+  const websiteUrls =
+    [];
+
+  const socialMediaMap =
+    new Map();
+
+  urls.forEach(
+    (url) => {
+      const platform =
+        getSocialMediaPlatform(
+          url
+        );
+
+      if (
+        !platform
+      ) {
+        websiteUrls.push(
+          url
+        );
+
+        return;
+      }
+
+      if (
+        !socialMediaMap.has(
+          platform
+        )
+      ) {
+        socialMediaMap.set(
+          platform,
+          []
+        );
+      }
+
+      socialMediaMap
+        .get(
+          platform
+        )
+        .push(
+          url
+        );
+    }
+  );
+
+  const socialMediaUrls =
+    [
+      ...socialMediaMap.entries()
+    ].map(
+      ([
+        platform,
+        platformUrls
+      ]) => ({
+        platform,
+        urls:
+          uniqueValues(
+            platformUrls
+          )
+      })
+    );
+
+  return {
+    websiteUrls:
+      uniqueValues(
+        websiteUrls
+      ),
+
+    socialMediaUrls
+  };
 }
 
 function splitDomainsAndUrls(
