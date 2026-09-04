@@ -1301,6 +1301,243 @@ function collectTelegramLinks() {
 }
 
 
+function collectTawkLinks() {
+  const tawkLinks =
+    new Set();
+
+  function searchForTawkUrl(
+    value
+  ) {
+    if (
+      typeof value !==
+      "string"
+    ) {
+      return;
+    }
+
+    const normalized =
+      value.replace(
+        /\\\//g,
+        "/"
+      );
+
+    const matches =
+      normalized.match(
+        /https?:\/\/(?:embed\.)?tawk\.to\/(?:chat\/)?[a-z0-9]+\/[a-z0-9]+/gi
+      );
+
+    if (
+      !matches
+    ) {
+      return;
+    }
+
+    matches.forEach(
+      (url) => {
+        const ids =
+          url.match(
+            /tawk\.to\/(?:chat\/)?([a-z0-9]+)\/([a-z0-9]+)/i
+          );
+
+        if (
+          !ids
+        ) {
+          return;
+        }
+
+        tawkLinks.add(
+          `https://tawk.to/chat/${ids[1]}/${ids[2]}`
+        );
+      }
+    );
+  }
+
+  searchForTawkUrl(
+    document.documentElement.innerHTML
+  );
+
+  Array.from(
+    document.scripts
+  ).forEach(
+    (script) => {
+      searchForTawkUrl(
+        script.src ||
+        ""
+      );
+
+      searchForTawkUrl(
+        script.textContent ||
+        ""
+      );
+    }
+  );
+
+  return [
+    ...tawkLinks
+  ];
+}
+
+
+
+function collectApkLinks() {
+  const apkLinks =
+    new Set();
+
+  const apkMimeType =
+    "application/vnd.android.package-archive";
+
+  document
+    .querySelectorAll(
+      "a[href], area[href]"
+    )
+    .forEach(
+      (link) => {
+        const href =
+          (
+            link.href ||
+            ""
+          )
+            .trim();
+
+        const rawHref =
+          (
+            link.getAttribute(
+              "href"
+            ) ||
+            ""
+          )
+            .trim();
+
+        const downloadName =
+          (
+            link.getAttribute(
+              "download"
+            ) ||
+            ""
+          )
+            .trim();
+
+        const type =
+          (
+            link.getAttribute(
+              "type"
+            ) ||
+            ""
+          )
+            .toLowerCase()
+            .trim();
+
+        const linkText =
+          (
+            link.textContent ||
+            ""
+          )
+            .replace(
+              /\s+/g,
+              " "
+            )
+            .trim();
+
+        const hasApkUrl =
+          /\.apk(?:[?#]|$)/i.test(
+            href
+          ) ||
+          /\.apk(?:[?#]|$)/i.test(
+            rawHref
+          );
+
+        const hasApkFilename =
+          /\.apk$/i.test(
+            downloadName
+          );
+
+        const hasApkMimeType =
+          type ===
+          apkMimeType;
+
+        const hasApkText =
+          /\b(?:download|get|install)\s+(?:the\s+)?apk\b|\bandroid\s+apk\b/i.test(
+            linkText
+          );
+
+        if (
+          (
+            hasApkUrl ||
+            hasApkFilename ||
+            hasApkMimeType ||
+            hasApkText
+          ) &&
+          /^https?:\/\//i.test(
+            href
+          )
+        ) {
+          apkLinks.add(
+            href
+          );
+        }
+      }
+    );
+
+  return [
+    ...apkLinks
+  ];
+}
+
+
+function collectUrlsFromPageHtml() {
+  const urls =
+    new Set();
+
+  const html =
+    (
+      document.documentElement.innerHTML ||
+      ""
+    ).replace(
+      /\\\//g,
+      "/"
+    );
+
+  const matches =
+    html.match(
+      /https?:\/\/[^\s"'<>\\]+/gi
+    ) || [];
+
+  matches.forEach(
+    (value) => {
+      const candidate =
+        value.replace(
+          /[),.;]+$/,
+          ""
+        );
+
+      try {
+        const url =
+          new URL(
+            candidate
+          );
+
+        if (
+          url.protocol ===
+            "https:" ||
+          url.protocol ===
+            "http:"
+        ) {
+          urls.add(
+            url.href
+          );
+        }
+      } catch {
+        // Ignore a non-valid URL-like string.
+      }
+    }
+  );
+
+  return [
+    ...urls
+  ];
+}
+
+
 function collectPageLinks() {
   const links = new Set();
   const scannedDocuments = new Set();
@@ -1375,7 +1612,30 @@ function collectPageLinks() {
   for (const telegramUrl of collectTelegramLinks()) {
     links.add(telegramUrl);
   }
-
+  
+  
+  for (const tawkUrl of collectTawkLinks()) {
+    links.add(tawkUrl);
+  }
+  
+  for (
+    const apkUrl of
+    collectApkLinks()
+  ) {
+    links.add(
+      apkUrl
+    );
+  }
+  
+  for (
+    const pageUrl of
+    collectUrlsFromPageHtml()
+  ) {
+    links.add(
+      pageUrl
+    );
+  }
+  
   const result = [...links];
 
   console.log(

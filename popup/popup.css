@@ -523,3 +523,12 @@ input:focus-visible {
   font-size: 12px;
   font-weight: 500;
 }
+
+#pageAnalysisEmails,
+#pageAnalysisAddresses {
+  margin-top: 8px;
+  padding: 8px;
+  background: rgba(16, 26, 47, 0.72);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}

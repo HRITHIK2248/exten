@@ -7,6 +7,11 @@
   ============================================================
 */
 
+const pageAnalysisContactInformation =
+  document.getElementById(
+    "pageAnalysisContactInformation"
+  );
+
 const pageAnalysisAddressesButton =
   document.getElementById(
     "pageAnalysisAddressesButton"
@@ -1053,55 +1058,96 @@ copyEventUrlButton.addEventListener(
 pageAnalysisDomainsButton.addEventListener(
   "click",
   () => {
-    pageAnalysisDomainList.classList.toggle(
-      "hidden"
-    );
+    const isHidden =
+      pageAnalysisDomainList.classList.toggle(
+        "hidden"
+      );
+
+    pageAnalysisDomainsButton.textContent =
+      pageAnalysisDomainsButton.textContent.replace(
+        isHidden ? "▴" : "▾",
+        isHidden ? "▾" : "▴"
+      );
   }
 );
 
 pageAnalysisUrlsButton.addEventListener(
   "click",
   () => {
-    pageAnalysisUrlList.classList.toggle(
-      "hidden"
-    );
+    const isHidden =
+      pageAnalysisUrlList.classList.toggle(
+        "hidden"
+      );
+
+    pageAnalysisUrlsButton.textContent =
+      pageAnalysisUrlsButton.textContent.replace(
+        isHidden ? "▴" : "▾",
+        isHidden ? "▾" : "▴"
+      );
   }
 );
-
 
 pageAnalysisPhonesButton.addEventListener(
   "click",
   () => {
-    pageAnalysisPhoneList.classList.toggle(
-      "hidden"
-    );
+    const isHidden =
+      pageAnalysisPhoneList.classList.toggle(
+        "hidden"
+      );
+
+    pageAnalysisPhonesButton.textContent =
+      pageAnalysisPhonesButton.textContent.replace(
+        isHidden ? "▴" : "▾",
+        isHidden ? "▾" : "▴"
+      );
   }
 );
 
 pageAnalysisPossiblePhonesButton.addEventListener(
   "click",
   () => {
-    pageAnalysisPossiblePhoneList.classList.toggle(
-      "hidden"
-    );
+    const isHidden =
+      pageAnalysisPossiblePhoneList.classList.toggle(
+        "hidden"
+      );
+
+    pageAnalysisPossiblePhonesButton.textContent =
+      pageAnalysisPossiblePhonesButton.textContent.replace(
+        isHidden ? "▴" : "▾",
+        isHidden ? "▾" : "▴"
+      );
   }
 );
 
 pageAnalysisEmailsButton.addEventListener(
   "click",
   () => {
-    pageAnalysisEmailList.classList.toggle(
-      "hidden"
-    );
+    const isHidden =
+      pageAnalysisEmailList.classList.toggle(
+        "hidden"
+      );
+
+    pageAnalysisEmailsButton.textContent =
+      pageAnalysisEmailsButton.textContent.replace(
+        isHidden ? "▴" : "▾",
+        isHidden ? "▾" : "▴"
+      );
   }
 );
 
 pageAnalysisAddressesButton.addEventListener(
   "click",
   () => {
-    pageAnalysisAddressList.classList.toggle(
-      "hidden"
-    );
+    const isHidden =
+      pageAnalysisAddressList.classList.toggle(
+        "hidden"
+      );
+
+    pageAnalysisAddressesButton.textContent =
+      pageAnalysisAddressesButton.textContent.replace(
+        isHidden ? "▴" : "▾",
+        isHidden ? "▾" : "▴"
+      );
   }
 );
 
@@ -1776,15 +1822,27 @@ function addExpandableDetectedItems(
 
       items.forEach(
         (value) => {
+          const displayValue =
+            typeof value ===
+            "object"
+              ? value.display
+              : value;
+
+          const copyValue =
+            typeof value ===
+            "object"
+              ? value.copyValue
+              : value;
+
           addDetectedItem(
             container,
-            value,
-            copyButtonText
+            displayValue,
+            copyButtonText,
+            copyValue
           );
         }
       );
     };
-
   const renderFirstThree =
     () => {
       renderValues(
@@ -1921,24 +1979,35 @@ function renderPageAnalysis(
   pageAnalysisAddressList.innerHTML =
     "";
 
-  phones.forEach((phone) => {
-    addDetectedItem(
-      pageAnalysisPhoneList,
-      phone.display,
-      "Copy phone",
-      phone.copyValue
-    );
-  });
+  addExpandableDetectedItems(
+    pageAnalysisPhoneList,
+    phones,
+    "Copy phone",
+    "phone numbers"
+  );
 
-  possiblePhones.forEach((phone) => {
-    addDetectedItem(
-      pageAnalysisPossiblePhoneList,
-      phone,
-      "Copy candidate",
-      phone
-    );
-  });
+  addExpandableDetectedItems(
+    pageAnalysisPossiblePhoneList,
+    possiblePhones,
+    "Copy candidate",
+    "possible phone numbers"
+  );
+  
+  
+  addExpandableDetectedItems(
+    pageAnalysisEmailList,
+    emails,
+    "Copy email",
+    "email addresses"
+  );
 
+  addExpandableDetectedItems(
+    pageAnalysisAddressList,
+    addresses,
+    "Copy address",
+    "postal addresses"
+  );
+  
   addExpandableDetectedItems(
     pageAnalysisDomainList,
     domains,
@@ -1946,11 +2015,14 @@ function renderPageAnalysis(
     "domains"
   );
 
+
+  
+  
   addExpandableDetectedItems(
     pageAnalysisUrlList,
     websiteUrls,
     "Copy URL",
-    "URLs"
+    "website URLs"
   );
 
   socialMediaUrls.forEach(
@@ -1963,21 +2035,7 @@ function renderPageAnalysis(
     }
   );
 
-  emails.forEach((email) => {
-    addDetectedItem(
-      pageAnalysisEmailList,
-      email,
-      "Copy email"
-    );
-  });
-
-  addresses.forEach((address) => {
-    addDetectedItem(
-      pageAnalysisAddressList,
-      address,
-      "Copy address"
-    );
-  });
+  
 
   const hasResults =
     phones.length > 0 ||
@@ -1987,12 +2045,18 @@ function renderPageAnalysis(
     socialMediaUrls.length > 0 ||
     emails.length > 0 ||
     addresses.length > 0;
-
+  
+  pageAnalysisPhonesButton.textContent =
+    `Detected phone numbers (${phones.length}) ▾`;
+  
   pageAnalysisPhones.classList.toggle(
     "hidden",
     phones.length === 0
   );
-
+  
+  pageAnalysisPossiblePhonesButton.textContent =
+    `Possible phone numbers (${possiblePhones.length}) ▾`;
+  
   pageAnalysisPossiblePhones.classList.toggle(
     "hidden",
     possiblePhones.length === 0
@@ -2009,12 +2073,18 @@ function renderPageAnalysis(
     domains.length === 0 &&
     websiteUrls.length === 0
   );
-
+  
+  pageAnalysisDomainsButton.textContent =
+    `Domains (${domains.length}) ▾`;
+  
   pageAnalysisDomains.classList.toggle(
     "hidden",
     domains.length === 0
   );
-
+  
+  pageAnalysisUrlsButton.textContent =
+    `Website URLs (${websiteUrls.length}) ▾`;
+  
   pageAnalysisUrls.classList.toggle(
     "hidden",
     websiteUrls.length === 0
@@ -2024,17 +2094,31 @@ function renderPageAnalysis(
     "hidden",
     socialMediaUrls.length === 0
   );
-
+  
+  pageAnalysisEmailsButton.textContent =
+    `Email Addresses (${emails.length}) ▾`;
+  
   pageAnalysisEmails.classList.toggle(
     "hidden",
     emails.length === 0
   );
-
+  
+  pageAnalysisAddressesButton.textContent =
+    `Potential Postal Addresses (${addresses.length}) ▾`;
+  
   pageAnalysisAddresses.classList.toggle(
     "hidden",
     addresses.length === 0
   );
-
+  
+  pageAnalysisContactInformation.classList.toggle(
+    "hidden",
+    phones.length === 0 &&
+    possiblePhones.length === 0 &&
+    emails.length === 0 &&
+    addresses.length === 0
+  );
+  
   pageAnalysisResults.classList.toggle(
     "hidden",
     !hasResults
@@ -3413,7 +3497,7 @@ function addSocialMediaItem(
     "social-media-platform-button";
 
   platformButton.textContent =
-    `${platform} (${urls.length})`;
+    `${platform} (${urls.length}) ▾`;
 
   const details =
     document.createElement(
@@ -3606,12 +3690,18 @@ function addSocialMediaItem(
   platformButton.addEventListener(
     "click",
     () => {
-      details.classList.toggle(
-        "hidden"
-      );
+      const isHidden =
+        details.classList.toggle(
+          "hidden"
+        );
+
+      platformButton.textContent =
+        `${platform} (${urls.length}) ${
+          isHidden ? "▾" : "▴"
+        }`;
     }
   );
-
+  
   item.appendChild(
     platformButton
   );
