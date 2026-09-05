@@ -7,6 +7,24 @@
   ============================================================
 */
 
+
+
+const pageAnalysisApks =
+  document.getElementById(
+    "page-analysis-apks"
+  );
+
+const pageAnalysisApksButton =
+  document.getElementById(
+    "page-analysis-apks-button"
+  );
+
+const pageAnalysisApkList =
+  document.getElementById(
+    "page-analysis-apk-list"
+  );
+
+
 const pageAnalysisContactInformation =
   document.getElementById(
     "pageAnalysisContactInformation"
@@ -1087,6 +1105,22 @@ pageAnalysisUrlsButton.addEventListener(
   }
 );
 
+pageAnalysisApksButton.addEventListener(
+  "click",
+  () => {
+    const isHidden =
+      pageAnalysisApkList.classList.toggle(
+        "hidden"
+      );
+
+    pageAnalysisApksButton.textContent =
+      pageAnalysisApksButton.textContent.replace(
+        isHidden ? "▴" : "▾",
+        isHidden ? "▾" : "▴"
+      );
+  }
+);
+
 pageAnalysisPhonesButton.addEventListener(
   "click",
   () => {
@@ -1949,6 +1983,22 @@ function renderPageAnalysis(
     splitSocialMediaUrls(
       urls
     );
+
+  const appDownloadUrls =
+    websiteUrls.filter(
+      (url) =>
+        /\.(?:apk|mobileconfig|dmg)(?:[?#]|$)/i.test(
+          url
+        )
+    );
+
+  const normalWebsiteUrls =
+    websiteUrls.filter(
+      (url) =>
+        !/\.(?:apk|mobileconfig|dmg)(?:[?#]|$)/i.test(
+          url
+        )
+    );
   
   const addresses =
     extractAddresses(
@@ -2014,17 +2064,29 @@ function renderPageAnalysis(
     "Copy domain",
     "domains"
   );
-
-
-  
   
   addExpandableDetectedItems(
     pageAnalysisUrlList,
-    websiteUrls,
+    normalWebsiteUrls,
     "Copy URL",
     "website URLs"
   );
-
+  
+    addExpandableDetectedItems(
+    pageAnalysisApkList,
+    appDownloadUrls,
+    "Copy URL",
+    "download URLs"
+  );
+  
+  addExpandableDetectedItems(
+    pageAnalysisApkList,
+    appDownloadUrls,
+    "Copy URL",
+    "APP download URLs"
+  );
+  
+  
   socialMediaUrls.forEach(
     (socialLink) => {
       addSocialMediaItem(
@@ -2071,7 +2133,8 @@ function renderPageAnalysis(
   pageAnalysisWebLinks.classList.toggle(
     "hidden",
     domains.length === 0 &&
-    websiteUrls.length === 0
+    normalWebsiteUrls.length === 0 &&
+    appDownloadUrls.length === 0
   );
   
   pageAnalysisDomainsButton.textContent =
@@ -2083,13 +2146,21 @@ function renderPageAnalysis(
   );
   
   pageAnalysisUrlsButton.textContent =
-    `Website URLs (${websiteUrls.length}) ▾`;
+    `Website URLs (${normalWebsiteUrls.length}) ▾`;
   
   pageAnalysisUrls.classList.toggle(
     "hidden",
-    websiteUrls.length === 0
+    normalWebsiteUrls.length === 0
   );
+  
+  pageAnalysisApksButton.textContent =
+    `APP Download URLs (${appDownloadUrls.length}) ▾`;
 
+  pageAnalysisApks.classList.toggle(
+    "hidden",
+    appDownloadUrls.length === 0
+  );
+  
   pageAnalysisSocialMedia.classList.toggle(
     "hidden",
     socialMediaUrls.length === 0
@@ -3961,6 +4032,23 @@ function extractPhones(
       }
 
       /*
+        Reject ISO-style calendar dates such as:
+        2025-09-30
+        2025-05-27
+        2024-10-15
+      */
+      const isIsoDate =
+        /^\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])$/.test(
+          display
+        );
+
+      if (
+        isIsoDate
+      ) {
+        return;
+      }
+
+      /*
         Reject short numeric OTP, PIN, verification, and
         reference-code lengths.
       */
@@ -4046,7 +4134,9 @@ function extractPhones(
       ) {
         return;
       }
-
+      
+      
+      
       /*
         Reject money/price/decimal formats.
 
@@ -5421,6 +5511,9 @@ function resetAllSections() {
   );
 
   pageAnalysisUrlList.innerHTML =
+    "";
+    
+  pageAnalysisApkList.innerHTML =
     "";
   
   pageAnalysisEmailList.innerHTML =

@@ -1205,7 +1205,7 @@ function collectPageText() {
   */
   root
     .querySelectorAll(
-      'a[href^="tel:"], a[href^="mailto:"]'
+      'a[href^="tel:"]'
     )
     .forEach(
       (link) => {
@@ -1226,26 +1226,28 @@ function collectPageText() {
           )
             .trim();
 
-        const value =
+        const phone =
           rawHref
             .replace(
               /^tel:/i,
               ""
             )
-            .replace(
-              /^mailto:/i,
-              ""
-            )
             .trim();
 
         if (
-          !value
+          !phone
         ) {
           return;
         }
 
+        const formattedPhone =
+          phone.replace(
+            /^(\+\d{1,3})(\d{5})(\d{5})$/,
+            "$1 $2 $3"
+          );
+
         const key =
-          value.toLowerCase();
+          formattedPhone.toLowerCase();
 
         if (
           seen.has(
@@ -1260,7 +1262,65 @@ function collectPageText() {
         );
 
         parts.push(
-          value
+          formattedPhone
+        );
+      }
+    );
+
+  root
+    .querySelectorAll(
+      'a[href^="mailto:"]'
+    )
+    .forEach(
+      (link) => {
+        if (
+          link.closest(
+            ignoredSelector
+          )
+        ) {
+          return;
+        }
+
+        const rawHref =
+          (
+            link.getAttribute(
+              "href"
+            ) ||
+            ""
+          )
+            .trim();
+
+        const email =
+          rawHref
+            .replace(
+              /^mailto:/i,
+              ""
+            )
+            .trim();
+
+        if (
+          !email
+        ) {
+          return;
+        }
+
+        const key =
+          email.toLowerCase();
+
+        if (
+          seen.has(
+            key
+          )
+        ) {
+          return;
+        }
+
+        seen.add(
+          key
+        );
+
+        parts.push(
+          email
         );
       }
     );
@@ -1477,7 +1537,27 @@ function collectApkLinks() {
         }
       }
     );
+  
+  const htmlMatches =
+    document.documentElement.innerHTML.match(
+      /https?:\/\/[^\s"'<>\\]+\.apk(?:\?[^\s"'<>\\]*)?/gi
+    ) || [];
 
+  htmlMatches.forEach(
+    (url) => {
+      apkLinks.add(
+        url.replace(
+          /[),.;]+$/,
+          ""
+        )
+      );
+    }
+  );
+  
+  console.log(
+    "[APK Collector]",
+    [...apkLinks]
+  );
   return [
     ...apkLinks
   ];
@@ -1626,6 +1706,11 @@ function collectPageLinks() {
       apkUrl
     );
   }
+  
+  console.log(
+    "[Link Collector] APK links found:",
+    collectApkLinks()
+  );
   
   for (
     const pageUrl of
