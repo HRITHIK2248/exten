@@ -5794,13 +5794,66 @@ async function analyzeWebpage() {
       "[popup] Webpage analysis response:",
       response
     );
-    
-    renderPageAnalysis(
-      response.text ||
-      "",
-      response.links ||
-      []
+
+    const subpageCheck =
+      await browser.runtime.sendMessage({
+        type:
+          "CHECK_SAME_SITE_SUBPAGES",
+
+        pageUrl:
+          response.pageUrl ||
+          tab.url ||
+          "",
+
+        subpageUrls:
+          response.subpageUrls ||
+          []
+      });
+
+    console.log(
+      "[popup] Background subpage check:",
+      subpageCheck
     );
+
+    const combinedAnalysisText =
+      [
+        response.text ||
+          "",
+
+        subpageCheck?.subpageText ||
+          ""
+      ]
+        .filter(
+          Boolean
+        )
+        .join(
+          "\n"
+        );
+
+    renderPageAnalysis(
+      combinedAnalysisText,
+      response.links ||
+        []
+    );
+
+    const scanMessage =
+      subpageCheck?.scannedCount > 0
+        ? `Analysis complete. Scanned ${
+            subpageCheck.successfulCount
+          } same-site subpage${
+            subpageCheck.successfulCount ===
+            1
+              ? ""
+              : "s"
+          }.`
+        : "Analysis complete. No same-site subpages were available.";
+
+    pageAnalysisStatus.textContent =
+      subpageCheck?.limited
+        ? `${scanMessage} Limited to 20 pages.`
+        : scanMessage;
+    
+    
   } catch (error) {
     pageAnalysisStatus.textContent =
       error.message ||

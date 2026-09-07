@@ -111,6 +111,9 @@ browser.runtime.onMessage.addListener(
       const links =
         collectPageLinks();
       
+      const subpageUrls =
+        collectSameSiteSubpageUrls();
+      
       console.log("[Link Collector] Returned links:", links.length, links.slice(0, 10));
       
       console.log(
@@ -122,11 +125,24 @@ browser.runtime.onMessage.addListener(
         "[content] Page analysis link count:",
         links.length
       );
+      
+      console.log(
+        "[content] Same-site subpage count:",
+        subpageUrls.length
+      );
 
+      console.log(
+        "[content] Same-site subpages:",
+        subpageUrls
+      );
+      
       return Promise.resolve({
         ok: true,
         text,
-        links
+        links,
+        subpageUrls,
+        pageUrl:
+          window.location.href
       }); 
     }
     return false;
@@ -1736,3 +1752,100 @@ function collectPageLinks() {
 
   return result;
 }
+
+function collectSameSiteSubpageUrls() {
+  const currentPageUrl =
+    new URL(
+      window.location.href
+    );
+
+  const subpageUrls =
+    new Set();
+
+  document
+    .querySelectorAll(
+      "a[href], area[href]"
+    )
+    .forEach(
+      (link) => {
+        const rawHref =
+          (
+            link.getAttribute(
+              "href"
+            ) ||
+            ""
+          )
+            .trim();
+
+        if (
+          !rawHref ||
+          rawHref.startsWith(
+            "#"
+          ) ||
+          /^(?:mailto|tel|sms|smsto|javascript|data):/i.test(
+            rawHref
+          )
+        ) {
+          return;
+        }
+
+        let candidateUrl;
+
+        try {
+          candidateUrl =
+            new URL(
+              rawHref,
+              currentPageUrl.href
+            );
+        } catch {
+          return;
+        }
+
+        if (
+          candidateUrl.protocol !==
+            "http:" &&
+          candidateUrl.protocol !==
+            "https:"
+        ) {
+          return;
+        }
+
+        /*
+          Keep only URLs from the exact same website origin.
+          Any external linked website is ignored.
+        */
+        if (
+          candidateUrl.origin !==
+          currentPageUrl.origin
+        ) {
+          return;
+        }
+
+        /*
+          A #fragment does not mean a separate subpage.
+        */
+        candidateUrl.hash =
+          "";
+
+        /*
+          Do not add the current page itself.
+        */
+        if (
+          candidateUrl.href ===
+          currentPageUrl.href
+        ) {
+          return;
+        }
+
+        subpageUrls.add(
+          candidateUrl.href
+        );
+      }
+    );
+
+  return [
+    ...subpageUrls
+  ];
+}
+
+

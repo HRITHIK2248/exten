@@ -2,6 +2,12 @@
 
 console.log("[background] loaded");
 
+const MAX_SAME_SITE_SUBPAGES =
+  30;
+  
+const MAX_SAME_SITE_DEPTH =
+  2;  
+
 /*
   ============================================================
   Keyboard shortcuts
@@ -207,8 +213,12 @@ const DEFAULT_SCREENSHOT_SETTINGS = {
   arrowDirection: "auto"
 };
 
+
 browser.runtime.onMessage.addListener(
-  (message, sender) => {
+  async (
+    message,
+    sender
+  ) => {
     if (
       message.type ===
       "START_AUTO_SCAN"
@@ -246,30 +256,178 @@ browser.runtime.onMessage.addListener(
 
       return false;
     }
+
     if (
-  message.type ===
-  "SNAPSHOT_SELECTION"
-) {
-  const tabId =
-    sender.tab?.id;
+      message.type ===
+      "SNAPSHOT_SELECTION"
+    ) {
+      const tabId =
+        sender.tab?.id;
 
-  if (
-    !tabId
-  ) {
-    return false;
-  }
+      if (
+        !tabId
+      ) {
+        return false;
+      }
 
-  captureSnapshotSelection(
-    message,
-    tabId
-  );
+      captureSnapshotSelection(
+        message,
+        tabId
+      );
 
-  return false;
-}
+      return false;
+    }
+
+    if (
+      message.type ===
+      "CHECK_SAME_SITE_SUBPAGES"
+    ) {
+      const validatedUrls =
+        getValidatedSameSiteSubpageUrls(
+          message.pageUrl,
+          message.subpageUrls
+        );
+
+      console.log(
+        "[background] Same-site subpages received:",
+        message.subpageUrls
+      );
+
+      console.log(
+        "[background] Validated same-site subpages:",
+        validatedUrls
+      );
+
+      console.log(
+        "[background] Starting page URL:",
+        message.pageUrl
+      );
+
+      const pagesToScan =
+        validatedUrls.slice(
+          0,
+          MAX_SAME_SITE_SUBPAGES
+        );
+
+      const subpageTexts =
+        [];
+
+      let failedCount =
+        0;
+
+      for (
+        const subpageUrl of pagesToScan
+      ) {
+        try {
+          const response =
+            await fetch(
+              subpageUrl,
+              {
+                method:
+                  "GET",
+
+                credentials:
+                  "same-origin"
+              }
+            );
+
+          if (
+            !response.ok
+          ) {
+            throw new Error(
+              `HTTP ${response.status}`
+            );
+          }
+
+          const html =
+            await response.text();
+
+          const readableText =
+            extractReadableTextFromHtml(
+              html
+            );
+
+          if (
+            readableText
+          ) {
+            subpageTexts.push(
+              readableText
+            );
+          }
+
+          console.log(
+            "[background] Same-site subpage scanned:",
+            subpageUrl
+          );
+        } catch (error) {
+          failedCount +=
+            1;
+
+          console.warn(
+            "[background] Could not scan same-site subpage:",
+            subpageUrl,
+            error
+          );
+        }
+      }
+
+      const combinedSubpageText =
+        subpageTexts.join(
+          "\n"
+        );
+
+      console.log(
+        "[background] Same-site scan complete:",
+        {
+          requested:
+            pagesToScan.length,
+
+          successful:
+            subpageTexts.length,
+
+          failed:
+            failedCount,
+
+          textLength:
+            combinedSubpageText.length
+        }
+      );
+
+      return {
+        ok: true,
+
+        receivedCount:
+          Array.isArray(
+            message.subpageUrls
+          )
+            ? message.subpageUrls.length
+            : 0,
+
+        validatedCount:
+          validatedUrls.length,
+
+        scannedCount:
+          pagesToScan.length,
+
+        successfulCount:
+          subpageTexts.length,
+
+        failedCount,
+
+        limited:
+          validatedUrls.length >
+          MAX_SAME_SITE_SUBPAGES,
+
+        subpageText:
+          combinedSubpageText
+      };
+    }
 
     return false;
   }
 );
+
+
 
 async function autoScanVisibleTab(
   tabId
@@ -4394,3 +4552,267 @@ function loadImage(
     }
   );
 }
+
+
+function getValidatedSameSiteSubpageUrls(
+  pageUrl,
+  subpageUrls
+) {
+  let startingUrl;
+
+  try {
+    startingUrl =
+      new URL(
+        pageUrl
+      );
+  } catch {
+    return [];
+  }
+
+  if (
+    startingUrl.protocol !==
+      "http:" &&
+    startingUrl.protocol !==
+      "https:"
+  ) {
+    return [];
+  }
+
+  if (
+    !Array.isArray(
+      subpageUrls
+    )
+  ) {
+    return [];
+  }
+
+  const validUrls =
+    new Set();
+
+  subpageUrls.forEach(
+    (value) => {
+      let candidateUrl;
+
+      try {
+        candidateUrl =
+          new URL(
+            value,
+            startingUrl.href
+          );
+      } catch {
+        return;
+      }
+
+      if (
+        candidateUrl.protocol !==
+          "http:" &&
+        candidateUrl.protocol !==
+          "https:"
+      ) {
+        return;
+      }
+
+      /*
+        Second safety check:
+        background.js accepts only the exact same origin.
+      */
+      if (
+        candidateUrl.origin !==
+        startingUrl.origin
+      ) {
+        return;
+      }
+
+      /*
+        A fragment is not a separate page.
+      */
+      candidateUrl.hash =
+        "";
+
+      /*
+        Do not scan the starting page twice.
+      */
+      if (
+        candidateUrl.href ===
+        startingUrl.href
+      ) {
+        return;
+      }
+
+      validUrls.add(
+        candidateUrl.href
+      );
+    }
+  );
+
+  return [
+    ...validUrls
+  ];
+}
+
+
+
+function extractReadableTextFromHtml(
+  html
+) {
+  if (
+    !html
+  ) {
+    return "";
+  }
+
+  const parser =
+    new DOMParser();
+
+  const document =
+    parser.parseFromString(
+      html,
+      "text/html"
+    );
+
+  document
+    .querySelectorAll(
+      "script, style, noscript, template, svg, canvas, iframe, object, embed, form, input, textarea, select, option, button, img, picture, video, audio, source"
+    )
+    .forEach(
+      (element) => {
+        element.remove();
+      }
+    );
+
+  const root =
+    document.body ||
+    document.documentElement;
+
+  if (
+    !root
+  ) {
+    return "";
+  }
+
+  const parts =
+    [];
+
+  const seen =
+    new Set();
+
+  const walker =
+    document.createTreeWalker(
+      root,
+      NodeFilter.SHOW_TEXT
+    );
+
+  let node;
+
+  while (
+    (node = walker.nextNode())
+  ) {
+    const text =
+      (
+        node.nodeValue ||
+        ""
+      )
+        .replace(
+          /\s+/g,
+          " "
+        )
+        .trim();
+
+    if (
+      !text
+    ) {
+      continue;
+    }
+
+    const key =
+      text.toLowerCase();
+
+    if (
+      seen.has(
+        key
+      )
+    ) {
+      continue;
+    }
+
+    seen.add(
+      key
+    );
+
+    parts.push(
+      text
+    );
+  }
+
+  root
+    .querySelectorAll(
+      'a[href^="tel:"]'
+    )
+    .forEach(
+      (link) => {
+        const phone =
+          (
+            link.getAttribute(
+              "href"
+            ) ||
+            ""
+          )
+            .replace(
+              /^tel:/i,
+              ""
+            )
+            .trim();
+
+        if (
+          phone
+        ) {
+          parts.push(
+            phone
+          );
+        }
+      }
+    );
+
+  root
+    .querySelectorAll(
+      'a[href^="mailto:"]'
+    )
+    .forEach(
+      (link) => {
+        const email =
+          (
+            link.getAttribute(
+              "href"
+            ) ||
+            ""
+          )
+            .replace(
+              /^mailto:/i,
+              ""
+            )
+            .split(
+              "?"
+            )[0]
+            .trim();
+
+        if (
+          email
+        ) {
+          parts.push(
+            email
+          );
+        }
+      }
+    );
+
+  return [
+    ...new Set(
+      parts
+    )
+  ].join(
+    "\n"
+  );
+}
+
+
+
