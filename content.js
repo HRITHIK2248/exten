@@ -114,6 +114,9 @@ browser.runtime.onMessage.addListener(
       const subpageUrls =
         collectSameSiteSubpageUrls();
       
+      const downloadCandidates =
+        collectDownloadCandidates();
+      
       console.log("[Link Collector] Returned links:", links.length, links.slice(0, 10));
       
       console.log(
@@ -141,6 +144,7 @@ browser.runtime.onMessage.addListener(
         text,
         links,
         subpageUrls,
+        downloadCandidates,
         pageUrl:
           window.location.href
       }); 
@@ -1751,6 +1755,483 @@ function collectPageLinks() {
   );
 
   return result;
+}
+
+function collectDownloadCandidates() {
+  const directFiles =
+    new Set();
+
+  const possibleEndpoints =
+    new Set();
+
+  const directFilePattern =
+    /\.(?:apk|xapk|apks|aab|dmg|pkg|exe|msi|msix|msixbundle|deb|rpm|appimage|mobileconfig|config|plist|zip|rar|7z|iso|img)(?:[?#]|$)/i;
+
+  const endpointPathPattern =
+    /(?:^|\/)(?:download|downloads|download-app|downloadapp|get-app|getapp|install|installer|apk|android|app-download|file-download|files)(?:\/|$|\?|#)/i;
+
+  const downloadKeywordPattern =
+    /\b(?:download|install|get\s+app|get\s+the\s+app|android|apk|ios|windows|mac|macos|linux)\b|下载|立即下载|安装|应用|APP/i;
+
+  function addDirectFile(
+    value
+  ) {
+    const url =
+      resolveHttpUrl(
+        value
+      );
+
+    if (
+      url &&
+      directFilePattern.test(
+        url
+      )
+    ) {
+      directFiles.add(
+        url
+      );
+    }
+  }
+
+  function addPossibleEndpoint(
+    value
+  ) {
+    const url =
+      resolveHttpUrl(
+        value
+      );
+
+    if (
+      !url
+    ) {
+      return;
+    }
+
+    if (
+      directFilePattern.test(
+        url
+      )
+    ) {
+      directFiles.add(
+        url
+      );
+
+      return;
+    }
+
+    try {
+      const parsed =
+        new URL(
+          url
+        );
+
+      const looksLikeEndpoint =
+        endpointPathPattern.test(
+          parsed.pathname
+        ) ||
+        /(?:download|install|apk|android|app|file)/i.test(
+          parsed.search
+        );
+
+      if (
+        looksLikeEndpoint
+      ) {
+        possibleEndpoints.add(
+          parsed.href
+        );
+      }
+    } catch {
+      // Ignore invalid values.
+    }
+  }
+
+  function resolveHttpUrl(
+    value
+  ) {
+    if (
+      typeof value !==
+      "string"
+    ) {
+      return "";
+    }
+
+    const cleanValue =
+      value
+        .trim()
+        .replace(
+          /\\\//g,
+          "/"
+        )
+        .replace(
+          /^[("'`]+|[)"'`,.;]+$/g,
+          ""
+        );
+
+    if (
+      !cleanValue ||
+      /^(?:javascript|data|mailto|tel|sms|smsto):/i.test(
+        cleanValue
+      )
+    ) {
+      return "";
+    }
+
+    try {
+      const url =
+        new URL(
+          cleanValue,
+          window.location.href
+        );
+
+      if (
+        url.protocol !==
+          "http:" &&
+        url.protocol !==
+          "https:"
+      ) {
+        return "";
+      }
+
+      url.hash =
+        "";
+
+      return url.href;
+    } catch {
+      return "";
+    }
+  }
+
+  function collectUrlsFromText(
+    value,
+    contextText = ""
+  ) {
+    if (
+      typeof value !==
+      "string" ||
+      !value
+    ) {
+      return;
+    }
+
+    const normalized =
+      value.replace(
+        /\\\//g,
+        "/"
+      );
+
+    const absoluteUrls =
+      normalized.match(
+        /https?:\/\/[^\s"'<>\\]+/gi
+      ) || [];
+
+    absoluteUrls.forEach(
+      (url) => {
+        addDirectFile(
+          url
+        );
+
+        if (
+          downloadKeywordPattern.test(
+            contextText
+          )
+        ) {
+          addPossibleEndpoint(
+            url
+          );
+        }
+      }
+    );
+
+    const relativeUrls =
+      normalized.match(
+        /(?:\/(?:[a-z0-9._~!$&'()*+,;=:@%-]+\/?)+)(?:\?[^\s"'<>\\]*)?/gi
+      ) || [];
+
+    relativeUrls.forEach(
+      (url) => {
+        addDirectFile(
+          url
+        );
+
+        if (
+          endpointPathPattern.test(
+            url
+          ) ||
+          downloadKeywordPattern.test(
+            contextText
+          )
+        ) {
+          addPossibleEndpoint(
+            url
+          );
+        }
+      }
+    );
+  }
+
+  document
+    .querySelectorAll(
+      "a[href], area[href], button, [role='button'], [onclick], [data-url], [data-download], [data-href], [data-link], form[action], iframe[src], frame[src], object[data], embed[src]"
+    )
+    .forEach(
+      (element) => {
+        const elementText =
+          (
+            element.innerText ||
+            element.textContent ||
+            ""
+          )
+            .replace(
+              /\s+/g,
+              " "
+            )
+            .trim();
+
+        const attributes = [
+          "href",
+          "src",
+          "data",
+          "action",
+          "onclick",
+          "data-url",
+          "data-download",
+          "data-href",
+          "data-link"
+        ];
+
+        attributes.forEach(
+          (attributeName) => {
+            const attributeValue =
+              (
+                element.getAttribute(
+                  attributeName
+                ) ||
+                ""
+              ).trim();
+
+            if (
+              !attributeValue
+            ) {
+              return;
+            }
+
+            addDirectFile(
+              attributeValue
+            );
+
+            if (
+              endpointPathPattern.test(
+                attributeValue
+              ) ||
+              downloadKeywordPattern.test(
+                elementText
+              )
+            ) {
+              addPossibleEndpoint(
+                attributeValue
+              );
+            }
+
+            collectUrlsFromText(
+              attributeValue,
+              elementText
+            );
+          }
+        );
+
+        Array.from(
+          element.attributes || []
+        ).forEach(
+          (attribute) => {
+            if (
+              !/^data-/i.test(
+                attribute.name
+              )
+            ) {
+              return;
+            }
+
+            const attributeValue =
+              (
+                attribute.value ||
+                ""
+              ).trim();
+
+            addDirectFile(
+              attributeValue
+            );
+
+            if (
+              endpointPathPattern.test(
+                attributeValue
+              ) ||
+              downloadKeywordPattern.test(
+                elementText
+              )
+            ) {
+              addPossibleEndpoint(
+                attributeValue
+              );
+            }
+
+            collectUrlsFromText(
+              attributeValue,
+              elementText
+            );
+          }
+        );
+      }
+    );
+
+  Array.from(
+    document.scripts
+  ).forEach(
+    (script) => {
+      const source =
+        script.src ||
+        "";
+
+      const content =
+        script.textContent ||
+        "";
+
+      addDirectFile(
+        source
+      );
+
+      collectUrlsFromText(
+        source,
+        "script"
+      );
+
+      collectUrlsFromText(
+        content,
+        "download android apk install"
+      );
+    }
+  );
+
+  console.log(
+    "[Download Collector] Direct files:",
+    [...directFiles]
+  );
+
+  console.log(
+    "[Download Collector] Possible endpoints:",
+    [...possibleEndpoints]
+  );
+
+  const downloadActions =
+    collectDownloadActions();
+
+  return {
+    directFiles:
+      [...directFiles],
+
+    possibleEndpoints:
+      [...possibleEndpoints],
+
+    downloadActions
+ };
+}
+
+function collectDownloadActions() {
+  const actions =
+    new Set();
+
+  const actionTextPattern =
+     /\b(?:download|install|get\s+app|get\s+the\s+app|android\s+app|apk)\b|下载|立即下载|安装|应用|app下载|डाउनलोड|डाउनलोड करें|ऐप डाउनलोड|इंस्टॉल|تحميل|تنزيل|تحميل التطبيق|تثبيت|скачать|загрузить|установить|приложение|télécharger|installer|application|descargar|instalar|aplicación|baixar|instalar|aplicativo|herunterladen|installieren|app herunterladen|scarica|installare|applicazione|ダウンロード|アプリをダウンロード|インストール|다운로드|설치|앱 다운로드|indir|yükle|uygulama/i;
+
+  document
+    .querySelectorAll(
+      "a, button, [role='button'], input[type='button'], input[type='submit'], [onclick], div, span"
+    )
+    .forEach(
+      (element) => {
+        const text =
+          (
+            element.innerText ||
+            element.value ||
+            element.textContent ||
+            element.getAttribute(
+              "aria-label"
+            ) ||
+            element.getAttribute(
+              "title"
+            ) ||
+            ""
+          )
+            .replace(
+              /\s+/g,
+              " "
+            )
+            .trim();
+
+        if (
+          !text ||
+          text.length >
+            160 ||
+          !actionTextPattern.test(
+            text
+          )
+        ) {
+          return;
+        }
+
+        /*
+          Avoid adding large parent containers when a child
+          contains the same download-related text.
+        */
+        const hasMatchingChild =
+          Array.from(
+            element.children ||
+            []
+          ).some(
+            (child) => {
+              const childText =
+                (
+                  child.innerText ||
+                  child.textContent ||
+                  ""
+                )
+                  .replace(
+                    /\s+/g,
+                    " "
+                  )
+                  .trim();
+
+              return (
+                childText &&
+                childText.length <=
+                  160 &&
+                actionTextPattern.test(
+                  childText
+                )
+              );
+            }
+          );
+
+        if (
+          hasMatchingChild
+        ) {
+          return;
+        }
+
+        const tagName =
+          (
+            element.tagName ||
+            "ELEMENT"
+          ).toLowerCase();
+
+        actions.add(
+          `${tagName}: ${text}`
+        );
+      }
+    );
+
+  return [
+    ...actions
+  ];
 }
 
 function collectSameSiteSubpageUrls() {

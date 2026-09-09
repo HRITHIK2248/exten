@@ -10,7 +10,8 @@
     "tabs",
     "<all_urls>",
     "clipboardWrite",
-    "storage"
+    "storage",
+    "downloads"
   ],
 
   "background": {

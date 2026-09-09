@@ -3,7 +3,7 @@
 console.log("[background] loaded");
 
 const MAX_SAME_SITE_SUBPAGES =
-  30;
+  50;
   
 const MAX_SAME_SITE_DEPTH =
   2;  
@@ -206,6 +206,56 @@ async function handleKeyboardCommand(
   }
 }
 
+
+document.addEventListener(
+  "click",
+  (event) => {
+    const target = event.target.closest(
+      "a, button, [role='button'], [onclick], [data-url], [data-download]"
+    );
+
+    if (!target) {
+      return;
+    }
+
+    const href = target.href || "";
+    const text = (target.innerText || target.textContent || "")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    const dataset = {
+      ...target.dataset
+    };
+
+    const looksDownloadRelated =
+      /\.apk(?:$|[?#])/i.test(href) ||
+      /\b(download|install|android|apk|get app)\b/i.test(text) ||
+      Object.values(dataset).some((value) =>
+        /\b(download|install|android|apk)\b/i.test(
+          String(value)
+        )
+      );
+
+    if (!looksDownloadRelated) {
+      return;
+    }
+
+    browser.runtime.sendMessage({
+      type: "APK_DOWNLOAD_BUTTON_CLICKED",
+      pageUrl: location.href,
+      element: {
+        tagName: target.tagName,
+        text,
+        href,
+        dataset,
+        onclick: target.getAttribute("onclick") || ""
+      },
+      detectedAt: new Date().toISOString()
+    });
+  },
+  true
+);
+
 const DEFAULT_SCREENSHOT_SETTINGS = {
   borderSpacing: 12,
   borderThickness: 6,
@@ -312,11 +362,123 @@ browser.runtime.onMessage.addListener(
       const subpageTexts =
         [];
 
+      const levelTwoUrls =
+        new Set();
+
+      const scannedUrls =
+        new Set(
+          pagesToScan
+        );
+
       let failedCount =
         0;
 
       for (
         const subpageUrl of pagesToScan
+      ) {
+        try {
+          const response =
+            await fetch(
+              subpageUrl,
+              {
+                method:
+                  "GET",
+
+                credentials:
+                  "same-origin"
+              }
+            );
+
+          if (
+            !response.ok
+          ) {
+            throw new Error(
+              `HTTP ${response.status}`
+            );
+          }
+
+          const html =
+            await response.text();
+
+          const readableText =
+            extractReadableTextFromHtml(
+              html
+            );
+
+          const childUrls =
+            collectSameSiteLinksFromHtml(
+              html,
+              subpageUrl,
+              message.pageUrl
+            );
+
+          childUrls.forEach(
+            (childUrl) => {
+              if (
+                !scannedUrls.has(
+                  childUrl
+                )
+              ) {
+                levelTwoUrls.add(
+                  childUrl
+                );
+              }
+            }
+          );
+
+          if (
+            readableText
+          ) {
+            subpageTexts.push(
+              readableText
+            );
+          }
+
+          console.log(
+            "[background] Level-1 same-site subpage scanned:",
+            subpageUrl
+          );
+        } catch (error) {
+          failedCount +=
+            1;
+
+          console.warn(
+            "[background] Could not scan Level-1 same-site subpage:",
+            subpageUrl,
+            error
+          );
+        }
+      }
+
+      const remainingPageSlots =
+        Math.max(
+          0,
+          MAX_SAME_SITE_SUBPAGES -
+            pagesToScan.length
+        );
+
+      const levelTwoUrlsToScan =
+        [
+          ...levelTwoUrls
+        ]
+          .filter(
+            (levelTwoUrl) =>
+              !scannedUrls.has(
+                levelTwoUrl
+              )
+          )
+          .slice(
+            0,
+            remainingPageSlots
+          );
+
+      console.log(
+        "[background] Level-2 same-site URLs to scan:",
+        levelTwoUrlsToScan
+      );
+
+      for (
+        const subpageUrl of levelTwoUrlsToScan
       ) {
         try {
           const response =
@@ -355,8 +517,12 @@ browser.runtime.onMessage.addListener(
             );
           }
 
+          scannedUrls.add(
+            subpageUrl
+          );
+
           console.log(
-            "[background] Same-site subpage scanned:",
+            "[background] Level-2 same-site subpage scanned:",
             subpageUrl
           );
         } catch (error) {
@@ -364,12 +530,16 @@ browser.runtime.onMessage.addListener(
             1;
 
           console.warn(
-            "[background] Could not scan same-site subpage:",
+            "[background] Could not scan Level-2 same-site subpage:",
             subpageUrl,
             error
           );
         }
       }
+
+      const totalScannedCount =
+        pagesToScan.length +
+        levelTwoUrlsToScan.length;
 
       const combinedSubpageText =
         subpageTexts.join(
@@ -379,8 +549,14 @@ browser.runtime.onMessage.addListener(
       console.log(
         "[background] Same-site scan complete:",
         {
-          requested:
+          levelOneRequested:
             pagesToScan.length,
+
+          levelTwoRequested:
+            levelTwoUrlsToScan.length,
+
+          totalRequested:
+            totalScannedCount,
 
           successful:
             subpageTexts.length,
@@ -407,7 +583,7 @@ browser.runtime.onMessage.addListener(
           validatedUrls.length,
 
         scannedCount:
-          pagesToScan.length,
+          totalScannedCount,
 
         successfulCount:
           subpageTexts.length,
@@ -4814,5 +4990,241 @@ function extractReadableTextFromHtml(
   );
 }
 
+
+function collectSameSiteLinksFromHtml(
+  html,
+  pageUrl,
+  startingPageUrl
+) {
+  if (
+    !html
+  ) {
+    return [];
+  }
+
+  let page;
+
+  let startingUrl;
+
+  try {
+    page =
+      new URL(
+        pageUrl
+      );
+
+    startingUrl =
+      new URL(
+        startingPageUrl
+      );
+  } catch {
+    return [];
+  }
+
+  const parser =
+    new DOMParser();
+
+  const document =
+    parser.parseFromString(
+      html,
+      "text/html"
+    );
+
+  const links =
+    new Set();
+
+  const ignoredExtensions =
+    /\.(?:apk|dmg|exe|msi|zip|rar|7z|tar|gz|pdf|docx?|xlsx?|pptx?|csv|txt|json|xml|jpg|jpeg|png|gif|webp|svg|ico|mp3|wav|ogg|mp4|webm|avi|mov)(?:[?#]|$)/i;
+
+  document
+    .querySelectorAll(
+      "a[href], area[href]"
+    )
+    .forEach(
+      (link) => {
+        const rawHref =
+          (
+            link.getAttribute(
+              "href"
+            ) ||
+            ""
+          )
+            .trim();
+
+        if (
+          !rawHref ||
+          rawHref.startsWith(
+            "#"
+          ) ||
+          /^(?:mailto|tel|sms|smsto|javascript|data):/i.test(
+            rawHref
+          ) ||
+          link.hasAttribute(
+            "download"
+          )
+        ) {
+          return;
+        }
+
+        let candidateUrl;
+
+        try {
+          candidateUrl =
+            new URL(
+              rawHref,
+              page.href
+            );
+        } catch {
+          return;
+        }
+
+        if (
+          candidateUrl.protocol !==
+            "http:" &&
+          candidateUrl.protocol !==
+            "https:"
+        ) {
+          return;
+        }
+
+        /*
+          Main safety rule:
+          Level-2 URLs must match the original starting origin.
+        */
+        if (
+          candidateUrl.origin !==
+          startingUrl.origin
+        ) {
+          return;
+        }
+
+        candidateUrl.hash =
+          "";
+
+        if (
+          candidateUrl.href ===
+            startingUrl.href ||
+          candidateUrl.href ===
+            page.href ||
+          ignoredExtensions.test(
+            candidateUrl.pathname
+          )
+        ) {
+          return;
+        }
+
+        links.add(
+          candidateUrl.href
+        );
+      }
+    );
+
+  return [
+    ...links
+  ];
+}
+
+
+function isApkDownload(downloadItem) {
+  const fileName = String(downloadItem.filename || "");
+  const finalUrl = String(downloadItem.finalUrl || "");
+  const sourceUrl = String(downloadItem.url || "");
+
+  return (
+    /\.apk(?:$|[?#])/i.test(fileName) ||
+    /\.apk(?:$|[?#])/i.test(finalUrl) ||
+    /\.apk(?:$|[?#])/i.test(sourceUrl) ||
+    /android.*package|application\/vnd\.android\.package-archive/i.test(
+      String(downloadItem.mime || "")
+    )
+  );
+}
+
+async function saveDetectedApk(downloadId) {
+  try {
+    const results = await browser.downloads.search({
+      id: downloadId
+    });
+
+    const downloadItem = results[0];
+
+    if (!downloadItem || !isApkDownload(downloadItem)) {
+      return;
+    }
+
+    const apkDetection = {
+      id: downloadItem.id,
+      filename: downloadItem.filename || "",
+      url: downloadItem.finalUrl || downloadItem.url || "",
+      sourceUrl: downloadItem.referrer || "",
+      mime: downloadItem.mime || "",
+      fileSize: downloadItem.fileSize || 0,
+      totalBytes: downloadItem.totalBytes || 0,
+      state: downloadItem.state || "",
+      detectedAt: new Date().toISOString()
+    };
+
+    await browser.storage.local.set({
+      latestDetectedApk: apkDetection
+    });
+
+    console.log(
+      "[background] APK download detected:",
+      apkDetection
+    );
+  } catch (error) {
+    console.error(
+      "[background] Could not inspect completed download:",
+      error
+    );
+  }
+}
+
+browser.downloads.onChanged.addListener(async (delta) => {
+  if (delta.state?.current !== "complete") {
+    return;
+  }
+
+  try {
+    const results = await browser.downloads.search({
+      id: delta.id
+    });
+
+    const downloadItem = results[0];
+
+    console.log(
+      "[background] Completed browser download:",
+      downloadItem
+    );
+
+    if (!downloadItem || !isApkDownload(downloadItem)) {
+      console.log(
+        "[background] Completed download is not classified as APK."
+      );
+      return;
+    }
+
+    await saveDetectedApk(delta.id);
+  } catch (error) {
+    console.error(
+      "[background] Could not inspect completed download:",
+      error
+    );
+  }
+});
+
+browser.runtime.onMessage.addListener((message) => {
+  if (message?.type !== "APK_DOWNLOAD_BUTTON_CLICKED") {
+    return;
+  }
+
+  console.log(
+    "[background] APK/download-related button clicked:",
+    message
+  );
+
+  return browser.storage.local.set({
+    latestApkDownloadAttempt: message
+  });
+});
 
 

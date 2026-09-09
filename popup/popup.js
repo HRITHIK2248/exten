@@ -7,7 +7,20 @@
   ============================================================
 */
 
+const pageAnalysisDownloadActions =
+  document.getElementById(
+    "page-analysis-download-actions"
+  );
 
+const pageAnalysisDownloadActionsButton =
+  document.getElementById(
+    "page-analysis-download-actions-button"
+  );
+
+const pageAnalysisDownloadActionList =
+  document.getElementById(
+    "page-analysis-download-action-list"
+  );
 
 const pageAnalysisApks =
   document.getElementById(
@@ -24,6 +37,20 @@ const pageAnalysisApkList =
     "page-analysis-apk-list"
   );
 
+const pageAnalysisDownloadEndpoints =
+  document.getElementById(
+    "page-analysis-download-endpoints"
+  );
+
+const pageAnalysisDownloadEndpointsButton =
+  document.getElementById(
+    "page-analysis-download-endpoints-button"
+  );
+
+const pageAnalysisDownloadEndpointList =
+  document.getElementById(
+    "page-analysis-download-endpoint-list"
+  );
 
 const pageAnalysisContactInformation =
   document.getElementById(
@@ -1121,6 +1148,38 @@ pageAnalysisApksButton.addEventListener(
   }
 );
 
+pageAnalysisDownloadEndpointsButton.addEventListener(
+  "click",
+  () => {
+    const isHidden =
+      pageAnalysisDownloadEndpointList.classList.toggle(
+        "hidden"
+      );
+
+    pageAnalysisDownloadEndpointsButton.textContent =
+      pageAnalysisDownloadEndpointsButton.textContent.replace(
+        isHidden ? "▴" : "▾",
+        isHidden ? "▾" : "▴"
+      );
+  }
+);
+
+pageAnalysisDownloadActionsButton.addEventListener(
+  "click",
+  () => {
+    const isHidden =
+      pageAnalysisDownloadActionList.classList.toggle(
+        "hidden"
+      );
+
+    pageAnalysisDownloadActionsButton.textContent =
+      pageAnalysisDownloadActionsButton.textContent.replace(
+        isHidden ? "▴" : "▾",
+        isHidden ? "▾" : "▴"
+      );
+  }
+);
+
 pageAnalysisPhonesButton.addEventListener(
   "click",
   () => {
@@ -1492,6 +1551,10 @@ async function copyQrisNationalId() {
 }
 
 
+
+
+
+
 /*
   ============================================================
   18. Copy raw QR information
@@ -1826,6 +1889,9 @@ function showCopyStatus(
 }
 
 
+
+
+
 /*
   ============================================================
   webpage analze 
@@ -1943,7 +2009,8 @@ function addExpandableDetectedItems(
 
 function renderPageAnalysis(
   text,
-  pageLinks = []
+  pageLinks = [],
+  downloadCandidates = {}
 ) {
 
     
@@ -1984,21 +2051,56 @@ function renderPageAnalysis(
       urls
     );
 
+  const directFilePattern =
+    /\.(?:apk|xapk|apks|aab|dmg|pkg|exe|msi|msix|msixbundle|deb|rpm|    appimage|mobileconfig|config|plist|zip|rar|7z|iso|img)(?:[?#]|$)/i;
+
+  const scannedDirectFiles =
+    Array.isArray(
+      downloadCandidates.directFiles
+    )
+      ? downloadCandidates.directFiles
+      : [];
+
+  const possibleDownloadEndpoints =
+    Array.isArray(
+      downloadCandidates.possibleEndpoints
+    )
+      ? downloadCandidates.possibleEndpoints
+      : [];
+      
+  const downloadActions =
+    Array.isArray(
+      downloadCandidates.downloadActions
+    )
+      ? downloadCandidates.downloadActions
+      : [];    
+
   const appDownloadUrls =
-    websiteUrls.filter(
-      (url) =>
-        /\.(?:apk|mobileconfig|dmg)(?:[?#]|$)/i.test(
-          url
-        )
-    );
+    uniqueValues([
+      ...websiteUrls.filter(
+        (url) =>
+          directFilePattern.test(
+           url
+          )
+      ),
+
+      ...scannedDirectFiles.filter(
+        (url) =>
+          directFilePattern.test(
+            url
+          )
+      )
+    ]);
 
   const normalWebsiteUrls =
     websiteUrls.filter(
       (url) =>
-        !/\.(?:apk|mobileconfig|dmg)(?:[?#]|$)/i.test(
+        !directFilePattern.test(
           url
         )
     );
+
+  
   
   const addresses =
     extractAddresses(
@@ -2072,18 +2174,25 @@ function renderPageAnalysis(
     "website URLs"
   );
   
-    addExpandableDetectedItems(
-    pageAnalysisApkList,
-    appDownloadUrls,
-    "Copy URL",
-    "download URLs"
-  );
-  
   addExpandableDetectedItems(
     pageAnalysisApkList,
     appDownloadUrls,
     "Copy URL",
-    "APP download URLs"
+    "app download URLs"
+  );
+
+  addExpandableDetectedItems(
+    pageAnalysisDownloadEndpointList,
+    possibleDownloadEndpoints,
+    "Copy endpoint",
+    "possible download endpoints"
+  );
+  
+  addExpandableDetectedItems(
+    pageAnalysisDownloadActionList,
+    downloadActions,
+    "Copy action",
+    "download actions"
   );
   
   
@@ -2134,7 +2243,9 @@ function renderPageAnalysis(
     "hidden",
     domains.length === 0 &&
     normalWebsiteUrls.length === 0 &&
-    appDownloadUrls.length === 0
+    appDownloadUrls.length === 0 &&
+    possibleDownloadEndpoints.length === 0 &&
+    downloadActions.length === 0
   );
   
   pageAnalysisDomainsButton.textContent =
@@ -2159,6 +2270,22 @@ function renderPageAnalysis(
   pageAnalysisApks.classList.toggle(
     "hidden",
     appDownloadUrls.length === 0
+  );
+  
+  pageAnalysisDownloadEndpointsButton.textContent =
+    `Possible Download Endpoints (${possibleDownloadEndpoints.length}) ▾`;
+
+  pageAnalysisDownloadEndpoints.classList.toggle(
+    "hidden",
+    possibleDownloadEndpoints.length === 0
+  );
+  
+  pageAnalysisDownloadActionsButton.textContent =
+    `Download Actions Detected (${downloadActions.length}) ▾`;
+
+  pageAnalysisDownloadActions.classList.toggle(
+   "hidden",
+    downloadActions.length === 0
   );
   
   pageAnalysisSocialMedia.classList.toggle(
@@ -4047,7 +4174,28 @@ function extractPhones(
       ) {
         return;
       }
+       
+      /*
+        Reject year/reference-like numeric ranges such as:
+        2026-14246
+        33190-2016
+        2025-12345
+        2016-2026
 
+        These are commonly dates, document IDs, registration
+        numbers, version ranges, or reference codes—not phones.
+      */
+      const isYearOrReferenceRange =
+        /^(?:(?:19|20)\d{2}-\d{4,8}|\d{4,8}-(?:19|20)\d{2})$/.test(
+          display
+        );
+
+      if (
+        isYearOrReferenceRange
+      ) {
+        return;
+      } 
+       
       /*
         Reject short numeric OTP, PIN, verification, and
         reference-code lengths.
@@ -5516,6 +5664,24 @@ function resetAllSections() {
   pageAnalysisApkList.innerHTML =
     "";
   
+  pageAnalysisDownloadEndpoints.classList.add(
+    "hidden"
+  );
+
+  pageAnalysisDownloadEndpointList.innerHTML =
+    "";
+    
+    
+  pageAnalysisDownloadActions.classList.add(
+    "hidden"
+  );
+
+  pageAnalysisDownloadActionList.innerHTML =
+    "";  
+    
+  pageAnalysisDownloadActionList.innerHTML =
+    "";
+    
   pageAnalysisEmailList.innerHTML =
     "";
 
@@ -5539,6 +5705,8 @@ function resetAllSections() {
   34. Result type and final UI helpers
   ============================================================
 */
+
+
 
 function getResultType(
   result
@@ -5708,6 +5876,15 @@ async function analyzeWebpage() {
   /*
     Show only webpage-analysis output.
   */
+  
+  pageAnalysisDownloadActions.classList.add(
+    "hidden"
+  );
+
+  pageAnalysisDownloadActionList.innerHTML =
+    "";
+  
+  
   pageAnalysisSection.classList.remove(
     "hidden"
   );
@@ -5794,7 +5971,12 @@ async function analyzeWebpage() {
       "[popup] Webpage analysis response:",
       response
     );
-
+    
+    console.log(
+      "[popup] Download candidates:",
+      response.downloadCandidates
+    );
+    
     const subpageCheck =
       await browser.runtime.sendMessage({
         type:
@@ -5830,12 +6012,16 @@ async function analyzeWebpage() {
           "\n"
         );
 
+    
     renderPageAnalysis(
       combinedAnalysisText,
       response.links ||
-        []
+        [],
+      response.downloadCandidates ||
+        {}
     );
-
+    
+    
     const scanMessage =
       subpageCheck?.scannedCount > 0
         ? `Analysis complete. Scanned ${
