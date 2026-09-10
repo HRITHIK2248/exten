@@ -5811,10 +5811,6 @@ async function analyzeWebpage() {
   analyzePageButton.textContent =
     "Analyzing...";
 
-  /*
-    Show Webpage Analysis in the same result-card layout
-    used by Snapshot.
-  */
   emptyState.classList.add(
     "hidden"
   );
@@ -5826,9 +5822,6 @@ async function analyzeWebpage() {
   resultHeading.textContent =
     "Webpage Analysis";
 
-  /*
-    Hide all sections that belong to QR and Snapshot results.
-  */
   paymentInfo.classList.add(
     "hidden"
   );
@@ -5873,18 +5866,13 @@ async function analyzeWebpage() {
     null
   );
 
-  /*
-    Show only webpage-analysis output.
-  */
-  
   pageAnalysisDownloadActions.classList.add(
     "hidden"
   );
 
   pageAnalysisDownloadActionList.innerHTML =
     "";
-  
-  
+
   pageAnalysisSection.classList.remove(
     "hidden"
   );
@@ -5902,28 +5890,28 @@ async function analyzeWebpage() {
 
   pageAnalysisPhoneList.innerHTML =
     "";
-  
+
   pageAnalysisPossiblePhoneList.innerHTML =
     "";
 
   pageAnalysisPossiblePhones.classList.add(
     "hidden"
   );
-  
+
   pageAnalysisDomains.classList.add(
     "hidden"
   );
 
   pageAnalysisDomainList.innerHTML =
     "";
-  
+
   pageAnalysisUrls.classList.add(
     "hidden"
   );
 
   pageAnalysisUrlList.innerHTML =
-    ""; 
-     
+    "";
+
   pageAnalysisEmailList.innerHTML =
     "";
 
@@ -5942,7 +5930,8 @@ async function analyzeWebpage() {
 
     if (
       !tab ||
-      !tab.id
+      !tab.id ||
+      !tab.url
     ) {
       throw new Error(
         "No active webpage was found."
@@ -5966,43 +5955,105 @@ async function analyzeWebpage() {
         "The webpage did not return readable text."
       );
     }
-    
+
     console.log(
       "[popup] Webpage analysis response:",
       response
     );
-    
+
     console.log(
       "[popup] Download candidates:",
       response.downloadCandidates
     );
-    
-    const subpageCheck =
-      await browser.runtime.sendMessage({
-        type:
-          "CHECK_SAME_SITE_SUBPAGES",
 
-        pageUrl:
-          response.pageUrl ||
-          tab.url ||
-          "",
+    const sameSiteSubpageUrls =
+      Array.isArray(
+        response.sameSiteSubpageUrls
+      )
+        ? response.sameSiteSubpageUrls
+        : [];
 
-        subpageUrls:
-          response.subpageUrls ||
-          []
-      });
+    const subpageResponse =
+      await browser.runtime.sendMessage(
+        {
+          type:
+            "CHECK_SAME_SITE_SUBPAGES",
+
+          pageUrl:
+            tab.url,
+
+          subpageUrls:
+            sameSiteSubpageUrls
+        }
+      );
 
     console.log(
       "[popup] Background subpage check:",
-      subpageCheck
+      subpageResponse
     );
+
+    const currentDownloadCandidates =
+      response.downloadCandidates ||
+      {
+        directFiles: [],
+        possibleEndpoints: [],
+        downloadActions: []
+      };
+
+    const subpageDownloadCandidates =
+      subpageResponse?.downloadCandidates ||
+      {
+        directFiles: [],
+        possibleEndpoints: []
+      };
+
+    const mergedDownloadCandidates =
+      {
+        directFiles:
+          [
+            ...new Set(
+              [
+                ...(
+                  currentDownloadCandidates.directFiles ||
+                  []
+                ),
+
+                ...(
+                  subpageDownloadCandidates.directFiles ||
+                  []
+                )
+              ]
+            )
+          ],
+
+        possibleEndpoints:
+          [
+            ...new Set(
+              [
+                ...(
+                  currentDownloadCandidates.possibleEndpoints ||
+                  []
+                ),
+
+                ...(
+                  subpageDownloadCandidates.possibleEndpoints ||
+                  []
+                )
+              ]
+            )
+          ],
+
+        downloadActions:
+          currentDownloadCandidates.downloadActions ||
+          []
+      };
 
     const combinedAnalysisText =
       [
         response.text ||
           "",
 
-        subpageCheck?.subpageText ||
+        subpageResponse?.subpageText ||
           ""
       ]
         .filter(
@@ -6012,22 +6063,19 @@ async function analyzeWebpage() {
           "\n"
         );
 
-    
     renderPageAnalysis(
       combinedAnalysisText,
       response.links ||
         [],
-      response.downloadCandidates ||
-        {}
+      mergedDownloadCandidates
     );
-    
-    
+
     const scanMessage =
-      subpageCheck?.scannedCount > 0
+      subpageResponse?.scannedCount > 0
         ? `Analysis complete. Scanned ${
-            subpageCheck.successfulCount
+            subpageResponse.successfulCount
           } same-site subpage${
-            subpageCheck.successfulCount ===
+            subpageResponse.successfulCount ===
             1
               ? ""
               : "s"
@@ -6035,11 +6083,9 @@ async function analyzeWebpage() {
         : "Analysis complete. No same-site subpages were available.";
 
     pageAnalysisStatus.textContent =
-      subpageCheck?.limited
+      subpageResponse?.limited
         ? `${scanMessage} Limited to 20 pages.`
         : scanMessage;
-    
-    
   } catch (error) {
     pageAnalysisStatus.textContent =
       error.message ||
@@ -6060,6 +6106,8 @@ async function analyzeWebpage() {
       "Analyze webpage";
   }
 }
+
+
 
 function renderKeyboardPageAnalysis(
   result
