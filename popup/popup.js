@@ -2052,7 +2052,7 @@ function renderPageAnalysis(
     );
 
   const directFilePattern =
-    /\.(?:apk|xapk|apks|aab|dmg|pkg|exe|msi|msix|msixbundle|deb|rpm|    appimage|mobileconfig|config|plist|zip|rar|7z|iso|img)(?:[?#]|$)/i;
+    /\.(?:apk|xapk|apks|aab|ipa|dmg|pkg|exe|msi|msix|msixbundle|deb|rpm|appimage|mobileconfig|config|plist|zip|rar|7z|iso|img)(?:[?#]|$)/i;
 
   const scannedDirectFiles =
     Array.isArray(
@@ -2215,7 +2215,10 @@ function renderPageAnalysis(
     websiteUrls.length > 0 ||
     socialMediaUrls.length > 0 ||
     emails.length > 0 ||
-    addresses.length > 0;
+    addresses.length > 0 ||
+    appDownloadUrls.length > 0 ||
+    possibleDownloadEndpoints.length > 0 ||
+    downloadActions.length > 0;
   
   pageAnalysisPhonesButton.textContent =
     `Detected phone numbers (${phones.length}) ▾`;
@@ -5968,9 +5971,9 @@ async function analyzeWebpage() {
 
     const sameSiteSubpageUrls =
       Array.isArray(
-        response.sameSiteSubpageUrls
+        response.subpageUrls
       )
-        ? response.sameSiteSubpageUrls
+        ? response.subpageUrls
         : [];
 
     const subpageResponse =
@@ -5991,7 +5994,28 @@ async function analyzeWebpage() {
       "[popup] Background subpage check:",
       subpageResponse
     );
+    
+    
+    const renderedSubpageResponse =
+      await browser.runtime.sendMessage(
+        {
+          type:
+            "SCAN_RENDERED_DOWNLOAD_SUBPAGES",
 
+          pageUrl:
+            tab.url,
+
+          subpageUrls:
+            sameSiteSubpageUrls
+        }
+      );
+
+    console.log(
+      "[popup] Rendered subpage check:",
+      renderedSubpageResponse
+    );
+    
+    
     const currentDownloadCandidates =
       response.downloadCandidates ||
       {
@@ -6006,7 +6030,16 @@ async function analyzeWebpage() {
         directFiles: [],
         possibleEndpoints: []
       };
-
+    
+    
+    const renderedSubpageDownloadCandidates =
+      renderedSubpageResponse?.downloadCandidates ||
+      {
+        directFiles: [],
+        possibleEndpoints: [],
+        downloadActions: []
+      };
+    
     const mergedDownloadCandidates =
       {
         directFiles:
@@ -6020,6 +6053,11 @@ async function analyzeWebpage() {
 
                 ...(
                   subpageDownloadCandidates.directFiles ||
+                  []
+                ),
+
+                ...(
+                  renderedSubpageDownloadCandidates.directFiles ||
                   []
                 )
               ]
@@ -6038,14 +6076,32 @@ async function analyzeWebpage() {
                 ...(
                   subpageDownloadCandidates.possibleEndpoints ||
                   []
+                ),
+
+                ...(
+                  renderedSubpageDownloadCandidates.possibleEndpoints ||
+                  []
                 )
               ]
             )
           ],
 
         downloadActions:
-          currentDownloadCandidates.downloadActions ||
-          []
+          [
+            ...new Set(
+              [
+                ...(
+                  currentDownloadCandidates.downloadActions ||
+                  []
+                ),
+
+                ...(
+                  renderedSubpageDownloadCandidates.downloadActions ||
+                  []
+                )
+              ]
+            )
+          ]
       };
 
     const combinedAnalysisText =
@@ -6070,18 +6126,31 @@ async function analyzeWebpage() {
       mergedDownloadCandidates
     );
 
-    const scanMessage =
-      subpageResponse?.scannedCount > 0
-        ? `Analysis complete. Scanned ${
-            subpageResponse.successfulCount
-          } same-site subpage${
-            subpageResponse.successfulCount ===
-            1
-              ? ""
-              : "s"
-          }.`
-        : "Analysis complete. No same-site subpages were available.";
+    const rawScannedCount =
+      subpageResponse?.scannedCount ||
+      0;
 
+    const renderedScannedCount =
+      renderedSubpageResponse?.scannedCount ||
+      0;
+
+    const scanMessage =
+      `Analysis complete. Scanned ${
+        rawScannedCount
+      } same-site subpage${
+        rawScannedCount ===
+        1
+          ? ""
+          : "s"
+      } and ${
+        renderedScannedCount
+      } rendered download page${
+        renderedScannedCount ===
+        1
+          ? ""
+          : "s"
+      }.`;
+      
     pageAnalysisStatus.textContent =
       subpageResponse?.limited
         ? `${scanMessage} Limited to 20 pages.`

@@ -105,53 +105,228 @@ browser.runtime.onMessage.addListener(
       message.type ===
       "ANALYZE_WEBPAGE"
     ) {
-    const text =
-        collectPageText();
-
-      const links =
-        collectPageLinks();
-      
-      const subpageUrls =
-        collectSameSiteSubpageUrls();
-      
-      const downloadCandidates =
-        collectDownloadCandidates();
-      
-      console.log("[Link Collector] Returned links:", links.length, links.slice(0, 10));
-      
-      console.log(
-        "[content] Page analysis text length:",
-        text.length
-      );
-
-      console.log(
-        "[content] Page analysis link count:",
-        links.length
-      );
-      
-      console.log(
-        "[content] Same-site subpage count:",
-        subpageUrls.length
-      );
-
-      console.log(
-        "[content] Same-site subpages:",
-        subpageUrls
-      );
-      
-      return Promise.resolve({
-        ok: true,
-        text,
-        links,
-        subpageUrls,
-        downloadCandidates,
-        pageUrl:
-          window.location.href
-      }); 
+      return analyzeDynamicWebpage();
     }
     return false;
   }
 );
+
+async function analyzeDynamicWebpage() {
+  const mergedText =
+    new Set();
+
+  const mergedLinks =
+    new Set();
+
+  const mergedSubpageUrls =
+    new Set();
+
+  const mergedDirectFiles =
+    new Set();
+
+  const mergedPossibleEndpoints =
+    new Set();
+
+  const mergedDownloadActions =
+    new Set();
+
+  async function mergeCurrentScan() {
+    const text =
+      collectPageText();
+
+    const links =
+      collectPageLinks();
+
+    const subpageUrls =
+      await collectSameSiteSubpageUrls();
+
+    const downloadCandidates =
+      collectDownloadCandidates();
+
+    text
+      .split(/\r?\n/)
+      .map(
+        (value) =>
+          value.trim()
+      )
+      .filter(
+        Boolean
+      )
+      .forEach(
+        (value) =>
+          mergedText.add(
+            value
+          )
+      );
+
+    links.forEach(
+      (url) =>
+        mergedLinks.add(
+          url
+        )
+    );
+
+    subpageUrls.forEach(
+      (url) =>
+        mergedSubpageUrls.add(
+          url
+        )
+    );
+
+    (
+      downloadCandidates.directFiles ||
+      []
+    ).forEach(
+      (url) =>
+        mergedDirectFiles.add(
+          url
+        )
+    );
+
+    (
+      downloadCandidates.possibleEndpoints ||
+      []
+    ).forEach(
+      (url) =>
+        mergedPossibleEndpoints.add(
+          url
+        )
+    );
+
+    (
+      downloadCandidates.downloadActions ||
+      []
+    ).forEach(
+      (action) =>
+        mergedDownloadActions.add(
+          action
+        )
+    );
+  }
+
+  function wait(
+    milliseconds
+  ) {
+    return new Promise(
+      (resolve) => {
+        setTimeout(
+          resolve,
+          milliseconds
+        );
+      }
+    );
+  }
+
+  let rescanTimer =
+    null;
+
+  const observer =
+    new MutationObserver(
+      () => {
+        clearTimeout(
+          rescanTimer
+        );
+
+        rescanTimer =
+          setTimeout(
+            () => {
+              mergeCurrentScan().catch(
+                (error) => {
+                  console.warn(
+                    "[content] Dynamic rescan failed:",
+                    error
+                  );
+                }
+              );
+            },
+            250
+          );
+      }
+    );
+
+  await mergeCurrentScan();
+
+  observer.observe(
+    document.documentElement,
+    {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: [
+        "href",
+        "src",
+        "onclick",
+        "data-url",
+        "data-download",
+        "data-href",
+        "data-link",
+        "class",
+        "aria-label",
+        "title"
+      ]
+    }
+  );
+
+  await wait(
+    700
+  );
+
+  await mergeCurrentScan();
+
+  await wait(
+    1800
+  );
+
+  await mergeCurrentScan();
+
+  await wait(
+    2500
+  );
+
+  observer.disconnect();
+
+  return {
+    ok: true,
+
+    text:
+      [
+        ...mergedText
+      ].join(
+        "\n"
+      ),
+
+    links:
+      [
+        ...mergedLinks
+      ],
+
+    subpageUrls:
+      [
+        ...mergedSubpageUrls
+      ],
+
+    downloadCandidates: {
+      directFiles:
+        [
+          ...mergedDirectFiles
+        ],
+
+      possibleEndpoints:
+        [
+          ...mergedPossibleEndpoints
+        ],
+
+      downloadActions:
+        [
+          ...mergedDownloadActions
+        ]
+    },
+
+    pageUrl:
+      window.location.href
+  };
+}
+
 
 
 
@@ -1718,18 +1893,21 @@ function collectPageLinks() {
     links.add(tawkUrl);
   }
   
+  const apkLinks =
+    collectApkLinks();
+
   for (
     const apkUrl of
-    collectApkLinks()
+    apkLinks
   ) {
     links.add(
       apkUrl
     );
   }
-  
+
   console.log(
     "[Link Collector] APK links found:",
-    collectApkLinks()
+    apkLinks
   );
   
   for (
@@ -2135,106 +2313,866 @@ function collectDownloadCandidates() {
  };
 }
 
+
 function collectDownloadActions() {
   const actions =
     new Set();
 
-  const actionTextPattern =
-     /\b(?:download|install|get\s+app|get\s+the\s+app|android\s+app|apk)\b|下载|立即下载|安装|应用|app下载|डाउनलोड|डाउनलोड करें|ऐप डाउनलोड|इंस्टॉल|تحميل|تنزيل|تحميل التطبيق|تثبيت|скачать|загрузить|установить|приложение|télécharger|installer|application|descargar|instalar|aplicación|baixar|instalar|aplicativo|herunterladen|installieren|app herunterladen|scarica|installare|applicazione|ダウンロード|アプリをダウンロード|インストール|다운로드|설치|앱 다운로드|indir|yükle|uygulama/i;
+  const interactiveSelector =
+    [
+      "a[href]",
+      "button",
+      "input[type='button']",
+      "input[type='submit']",
+      "[role='button']",
+      "[onclick]",
+      "[data-url]",
+      "[data-download]",
+      "[data-href]",
+      "[data-link]"
+    ].join(
+      ", "
+    );
+
+  const directFilePattern =
+    /\.(?:apk|xapk|apks|aab|ipa)(?:[?#]|$)/i;
+
+  const downloadPathPattern =
+    /(?:^|\/)(?:download|downloads|get-app|getapp|download-app|downloadapp|install|installer|apk|android|release|releases|file-download|files)(?:\/|$|\?|#)/i;
+
+  const downloadWordPattern =
+    /\b(?:download|install|get\s+(?:the\s+)?app|get\s+it|apk|xapk|apks|aab|latest\s+(?:version|release)|mobile\s+app)\b|下载|立即下载|安装|应用|app下载|डाउनलोड|डाउनलोड करें|ऐप डाउनलोड|इंस्टॉल|تحميل|تنزيل|تحميل التطبيق|تثبيت|скачать|загрузить|установить|приложение|télécharger|installer|application|descargar|instalar|aplicación|baixar|instalar|aplicativo|herunterladen|installieren|app herunterladen|scarica|installare|applicazione|ダウンロード|アプリをダウンロード|インストール|다운로드|설치|앱 다운로드|indir|yükle|uygulama/i;
+
+  const androidPattern =
+    /\b(?:android|apk|xapk|apks|aab|google\s*play|play\s*store)\b/i;
+
+  const iosPattern =
+    /\b(?:ios|iphone|ipad|app\s*store|testflight)\b/i;
+
+  function normalizeText(
+    value
+  ) {
+    return (
+      value ||
+      ""
+    )
+      .replace(
+        /\s+/g,
+        " "
+      )
+      .trim();
+  }
+
+  function getAttributeValues(
+    element
+  ) {
+    return [
+      element.getAttribute(
+        "href"
+      ),
+
+      element.getAttribute(
+        "src"
+      ),
+
+      element.getAttribute(
+        "onclick"
+      ),
+
+      element.getAttribute(
+        "data-url"
+      ),
+
+      element.getAttribute(
+        "data-download"
+      ),
+
+      element.getAttribute(
+        "data-href"
+      ),
+
+      element.getAttribute(
+        "data-link"
+      ),
+
+      element.getAttribute(
+        "aria-label"
+      ),
+
+      element.getAttribute(
+        "title"
+      ),
+
+      element.id,
+
+      element.className
+    ]
+      .filter(
+        (value) =>
+          typeof value ===
+          "string"
+      )
+      .join(
+        " "
+      );
+  }
+
+  function getResolvedUrl(
+    element
+  ) {
+    const rawUrl =
+      element.getAttribute(
+        "href"
+      ) ||
+      element.getAttribute(
+        "data-url"
+      ) ||
+      element.getAttribute(
+        "data-download"
+      ) ||
+      element.getAttribute(
+        "data-href"
+      ) ||
+      element.getAttribute(
+        "data-link"
+      ) ||
+      "";
+
+    if (
+      !rawUrl ||
+      /^(?:javascript|data|mailto|tel|sms|smsto):/i.test(
+        rawUrl
+      )
+    ) {
+      return "";
+    }
+
+    try {
+      const url =
+        new URL(
+          rawUrl,
+          window.location.href
+        );
+
+      if (
+        url.protocol !==
+          "http:" &&
+        url.protocol !==
+          "https:"
+      ) {
+        return "";
+      }
+
+      url.hash =
+        "";
+
+      return url.href;
+    } catch {
+      return "";
+    }
+  }
+
+  function getImageHints(
+    element
+  ) {
+    return Array.from(
+      element.querySelectorAll(
+        "img[alt], img[title], svg[aria-label], [aria-label], [title]"
+      )
+    )
+      .map(
+        (child) =>
+          [
+            child.getAttribute(
+              "alt"
+            ),
+
+            child.getAttribute(
+              "title"
+            ),
+
+            child.getAttribute(
+              "aria-label"
+            )
+          ]
+            .filter(
+              Boolean
+            )
+            .join(
+              " "
+            )
+      )
+      .join(
+        " "
+      );
+  }
+
+  function getNearbyContext(
+    element
+  ) {
+    const parent =
+      element.parentElement;
+
+    if (
+      !parent
+    ) {
+      return "";
+    }
+
+    return normalizeText(
+      parent.innerText ||
+      parent.textContent ||
+      ""
+    ).slice(
+      0,
+      280
+    );
+  }
+
+  function detectPlatform(
+    combinedText
+  ) {
+    if (
+      androidPattern.test(
+        combinedText
+      )
+    ) {
+      return "Android";
+    }
+
+    if (
+      iosPattern.test(
+        combinedText
+      )
+    ) {
+      return "iOS";
+    }
+
+    return "";
+  }
+
+  function getElementLabel(
+    element
+  ) {
+    return normalizeText(
+      element.getAttribute(
+        "aria-label"
+      ) ||
+      element.getAttribute(
+        "title"
+      ) ||
+      element.value ||
+      element.innerText ||
+      element.textContent ||
+      ""
+    ).slice(
+      0,
+      160
+    );
+  }
+
+  const seenElements =
+    new Set();
 
   document
     .querySelectorAll(
-      "a, button, [role='button'], input[type='button'], input[type='submit'], [onclick], div, span"
+      interactiveSelector
     )
     .forEach(
       (element) => {
-        const text =
-          (
-            element.innerText ||
-            element.value ||
-            element.textContent ||
-            element.getAttribute(
-              "aria-label"
-            ) ||
-            element.getAttribute(
-              "title"
-            ) ||
-            ""
-          )
-            .replace(
-              /\s+/g,
-              " "
-            )
-            .trim();
-
         if (
-          !text ||
-          text.length >
-            160 ||
-          !actionTextPattern.test(
-            text
+          seenElements.has(
+            element
           )
         ) {
           return;
         }
 
-        /*
-          Avoid adding large parent containers when a child
-          contains the same download-related text.
-        */
-        const hasMatchingChild =
-          Array.from(
-            element.children ||
-            []
-          ).some(
-            (child) => {
-              const childText =
-                (
-                  child.innerText ||
-                  child.textContent ||
-                  ""
-                )
-                  .replace(
-                    /\s+/g,
-                    " "
-                  )
-                  .trim();
+        seenElements.add(
+          element
+        );
 
-              return (
-                childText &&
-                childText.length <=
-                  160 &&
-                actionTextPattern.test(
-                  childText
-                )
-              );
-            }
+        const label =
+          getElementLabel(
+            element
+          );
+
+        const url =
+          getResolvedUrl(
+            element
+          );
+
+        const attributes =
+          getAttributeValues(
+            element
+          );
+
+        const imageHints =
+          getImageHints(
+            element
+          );
+
+        const nearbyContext =
+          getNearbyContext(
+            element
+          );
+
+        const combinedText =
+          [
+            label,
+            url,
+            attributes,
+            imageHints,
+            nearbyContext
+          ]
+            .filter(
+              Boolean
+            )
+            .join(
+              " "
+            );
+
+        const evidence =
+          [];
+
+        let score =
+          0;
+
+        if (
+          url &&
+          directFilePattern.test(
+            url
+          )
+        ) {
+          score +=
+            7;
+
+          evidence.push(
+            "direct app-file URL"
+          );
+        }
+
+        if (
+          url &&
+          downloadPathPattern.test(
+            new URL(
+              url
+            ).pathname
+          )
+        ) {
+          score +=
+            4;
+
+          evidence.push(
+            "download-style URL"
+          );
+        }
+
+        if (
+          /(?:data-download|data-url|data-href|data-link)/i.test(
+            element.outerHTML
+          )
+        ) {
+          score +=
+            3;
+
+          evidence.push(
+            "download data attribute"
+          );
+        }
+
+        if (
+          downloadWordPattern.test(
+            label
+          )
+        ) {
+          score +=
+            3;
+
+          evidence.push(
+            "download-related label"
+          );
+        }
+
+        const platform =
+          detectPlatform(
+            combinedText
           );
 
         if (
-          hasMatchingChild
+          platform
+        ) {
+          score +=
+            2;
+
+          evidence.push(
+            `${platform} clue`
+          );
+        }
+
+        if (
+          element.tagName ===
+          "A"
+        ) {
+          score +=
+            1;
+
+          evidence.push(
+            "link"
+          );
+        }
+
+        if (
+          element.tagName ===
+          "BUTTON" ||
+          element.getAttribute(
+            "role"
+          ) ===
+          "button" ||
+          element.hasAttribute(
+            "onclick"
+          )
+        ) {
+          score +=
+            1;
+
+          evidence.push(
+            "interactive control"
+          );
+        }
+
+        /*
+          Do not show generic controls. Require either:
+          - a direct/app download URL,
+          - a download endpoint plus an action clue,
+          - a download label,
+          - or a platform clue combined with a download-related
+            URL/data attribute.
+        */
+        const hasStrongSignal =
+          directFilePattern.test(
+            url
+          ) ||
+          (
+            downloadPathPattern.test(
+              url
+            ) &&
+            (
+              downloadWordPattern.test(
+                combinedText
+              ) ||
+              platform
+            )
+          ) ||
+          downloadWordPattern.test(
+            combinedText
+          ) ||
+          (
+            platform &&
+            /(?:download|install|release|version|file|data-url|data-download)/i.test(
+              combinedText
+            )
+          );
+
+        if (
+          !hasStrongSignal ||
+          score <
+            3
         ) {
           return;
         }
+
+        const confidence =
+          score >=
+          7
+            ? "High"
+            : score >=
+              5
+              ? "Medium"
+              : "Low";
 
         const tagName =
           (
             element.tagName ||
-            "ELEMENT"
+            "element"
           ).toLowerCase();
 
+        const displayLabel =
+          label ||
+          element.getAttribute(
+            "aria-label"
+          ) ||
+          element.getAttribute(
+            "title"
+          ) ||
+          "Unlabeled control";
+
+        const action =
+          platform
+            ? `${platform}: ${displayLabel}`
+            : displayLabel;
+
         actions.add(
-          `${tagName}: ${text}`
+          action
         );
       }
     );
+  
+  /*
+    Vue/SPA fallback:
+    Some sites make an entire card or <div> clickable through a
+    framework event listener. The final DOM may contain only a
+    child <span> with "Download APP", without a normal <button>,
+    <a>, or inline onclick attribute.
 
+    We use the download text only to locate a label, then report
+    its nearest meaningful parent card—not the text <span> itself.
+  */
+  document
+    .querySelectorAll(
+      "span, strong, b, em, p, label, div"
+    )
+    .forEach(
+      (labelElement) => {
+        const labelText =
+          normalizeText(
+            labelElement.innerText ||
+            labelElement.textContent ||
+            ""
+          );
+
+        if (
+          !labelText ||
+          labelText.length >
+            120 ||
+          !downloadWordPattern.test(
+            labelText
+          )
+        ) {
+          return;
+        }
+
+        let candidate =
+          labelElement.parentElement;
+
+        let fallback =
+          null;
+
+        for (
+          let depth = 0;
+          candidate &&
+          depth < 5;
+          depth++
+        ) {
+          const candidateText =
+            normalizeText(
+              candidate.innerText ||
+              candidate.textContent ||
+              ""
+            );
+
+          if (
+            !candidateText ||
+            candidateText.length >
+              280
+          ) {
+            candidate =
+              candidate.parentElement;
+
+            continue;
+          }
+
+          const attributes =
+            getAttributeValues(
+              candidate
+            );
+
+          const imageHints =
+            getImageHints(
+              candidate
+            );
+
+          const combinedText =
+            [
+              candidateText,
+              attributes,
+              imageHints
+            ]
+              .filter(
+                Boolean
+              )
+              .join(
+                " "
+              );
+
+          const hasFrameworkOrControlClue =
+            candidate.hasAttribute(
+              "role"
+            ) ||
+            candidate.hasAttribute(
+              "tabindex"
+            ) ||
+            candidate.hasAttribute(
+              "onclick"
+            ) ||
+            /(?:cursor|button|btn|card|download|install|app|android|apk|release)/i.test(
+              attributes
+            );
+
+          const style =
+            window.getComputedStyle(
+              candidate
+            );
+
+          const looksPointerClickable =
+            style.cursor ===
+            "pointer";
+
+          if (
+            hasFrameworkOrControlClue ||
+            looksPointerClickable
+          ) {
+            fallback =
+              candidate;
+
+            break;
+          }
+
+          candidate =
+            candidate.parentElement;
+        }
+
+        if (
+          !fallback
+        ) {
+          return;
+        }
+
+        const fallbackLabel =
+          getElementLabel(
+            fallback
+          );
+
+        const fallbackUrl =
+          getResolvedUrl(
+            fallback
+          );
+
+        const fallbackAttributes =
+          getAttributeValues(
+            fallback
+          );
+
+        const fallbackHints =
+          getImageHints(
+            fallback
+          );
+
+        const fallbackCombinedText =
+          [
+            labelText,
+            fallbackLabel,
+            fallbackUrl,
+            fallbackAttributes,
+            fallbackHints
+          ]
+            .filter(
+              Boolean
+            )
+            .join(
+              " "
+            );
+
+        const platform =
+          detectPlatform(
+            fallbackCombinedText
+          );
+
+        const tagName =
+          (
+            fallback.tagName ||
+            "element"
+          ).toLowerCase();
+
+        const displayLabel =
+          labelText ||
+          fallbackLabel ||
+          "Download control";
+
+        const action =
+          platform
+            ? `${platform}: ${displayLabel}`
+            : displayLabel;
+
+        actions.add(
+          action
+        );
+      }
+    );
+  
   return [
     ...actions
   ];
 }
 
-function collectSameSiteSubpageUrls() {
+
+async function collectSameSiteRoutesFromBundles(
+  pageUrl
+) {
+  const page =
+    new URL(
+      pageUrl
+    );
+
+  const scriptUrls =
+    [
+      ...document.scripts
+    ]
+      .map(
+        (script) =>
+          script.src
+      )
+      .filter(
+        (scriptUrl) => {
+          try {
+            return (
+              scriptUrl &&
+              new URL(
+                scriptUrl
+              ).origin ===
+                page.origin
+            );
+          } catch (
+            error
+          ) {
+            return false;
+          }
+        }
+      )
+      .slice(
+        0,
+        20
+      );
+
+  const routePaths =
+    new Set();
+
+  for (
+    const scriptUrl of scriptUrls
+  ) {
+    try {
+      const response =
+        await fetch(
+          scriptUrl,
+          {
+            credentials:
+              "same-origin"
+          }
+        );
+
+      if (
+        !response.ok
+      ) {
+        continue;
+      }
+
+      const text =
+        await response.text();
+
+      const routeMatches =
+        text.matchAll(
+          /(?:path|redirect)\s*:\s*["'`](\/[^"'`\\\s]{1,160})["'`]/g
+        );
+
+      for (
+        const match of routeMatches
+      ) {
+        const routePath =
+          match?.[1];
+
+        if (
+          !routePath ||
+          routePath === "/" ||
+          routePath.endsWith(
+            ".json"
+          ) ||
+          routePath.endsWith(
+            ".js"
+          ) ||
+          routePath.endsWith(
+            ".css"
+          )
+        ) {
+          continue;
+        }
+
+        routePaths.add(
+          routePath
+        );
+      }
+    } catch (
+      error
+    ) {
+      console.warn(
+        "[content] Could not inspect script bundle:",
+        scriptUrl,
+        error
+      );
+    }
+  }
+
+  const usesHashRouting =
+    (
+      page.hash &&
+      page.hash.startsWith(
+        "#/"
+      )
+    ) ||
+    [
+      ...document.querySelectorAll(
+        'a[href^="#/"]'
+      )
+    ].length > 0;
+
+  const routeUrls =
+    [];
+
+  for (
+    const routePath of routePaths
+  ) {
+    try {
+      const routeUrl =
+        usesHashRouting
+          ? `${page.origin}/#${routePath}`
+          : new URL(
+              routePath,
+              page.origin
+            ).href;
+
+      routeUrls.push(
+        routeUrl
+      );
+    } catch (
+      error
+    ) {
+      // Ignore malformed route values in bundles.
+    }
+  }
+
+  console.log(
+    "[content] Same-site routes found in bundles:",
+    routeUrls
+  );
+
+  return [
+    ...new Set(
+      routeUrls
+    )
+  ];
+}
+
+
+async function collectSameSiteSubpageUrls() {
   const currentPageUrl =
     new URL(
       window.location.href
@@ -2324,9 +3262,27 @@ function collectSameSiteSubpageUrls() {
       }
     );
 
-  return [
-    ...subpageUrls
-  ];
+  const bundleRouteUrls =
+    await collectSameSiteRoutesFromBundles(
+      currentPageUrl
+    );
+
+  const mergedSubpageUrls =
+    [
+      ...new Set(
+        [
+          ...subpageUrls,
+          ...bundleRouteUrls
+        ]
+      )
+    ];
+
+  console.log(
+    "[content] Combined same-site subpage URLs:",
+    mergedSubpageUrls
+  );
+
+  return mergedSubpageUrls;
 }
 
 

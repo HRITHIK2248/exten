@@ -4,7 +4,10 @@ console.log("[background] loaded");
 
 const MAX_SAME_SITE_SUBPAGES =
   50;
-  
+
+const MAX_RENDERED_DOWNLOAD_SUBPAGES =
+  5;
+    
 const MAX_SAME_SITE_DEPTH =
   2;  
 
@@ -307,26 +310,20 @@ browser.runtime.onMessage.addListener(
       return false;
     }
 
+
     if (
       message.type ===
-      "SNAPSHOT_SELECTION"
+      "SCAN_RENDERED_DOWNLOAD_SUBPAGES"
     ) {
-      const tabId =
-        sender.tab?.id;
-
-      if (
-        !tabId
-      ) {
-        return false;
-      }
-
-      captureSnapshotSelection(
-        message,
-        tabId
+      return scanRenderedDownloadSubpages(
+        message.pageUrl,
+        message.subpageUrls,
+        sender.tab?.windowId
       );
-
-      return false;
     }
+
+   
+
 
     if (
       message.type ===
@@ -363,6 +360,12 @@ browser.runtime.onMessage.addListener(
         [];
 
       const levelTwoUrls =
+        new Set();
+
+      const subpageDirectFiles =
+        new Set();
+
+      const subpagePossibleEndpoints =
         new Set();
 
       const scannedUrls =
@@ -411,6 +414,28 @@ browser.runtime.onMessage.addListener(
               subpageUrl,
               message.pageUrl
             );
+
+          const downloadCandidates =
+            collectDownloadCandidatesFromHtml(
+              html,
+              subpageUrl
+            );
+
+          downloadCandidates.directFiles.forEach(
+            (url) => {
+              subpageDirectFiles.add(
+                url
+              );
+            }
+          );
+
+          downloadCandidates.possibleEndpoints.forEach(
+            (url) => {
+              subpagePossibleEndpoints.add(
+                url
+              );
+            }
+          );
 
           childUrls.forEach(
             (childUrl) => {
@@ -509,6 +534,28 @@ browser.runtime.onMessage.addListener(
               html
             );
 
+          const downloadCandidates =
+            collectDownloadCandidatesFromHtml(
+              html,
+              subpageUrl
+            );
+
+          downloadCandidates.directFiles.forEach(
+            (url) => {
+              subpageDirectFiles.add(
+                url
+              );
+            }
+          );
+
+          downloadCandidates.possibleEndpoints.forEach(
+            (url) => {
+              subpagePossibleEndpoints.add(
+                url
+              );
+            }
+          );
+
           if (
             readableText
           ) {
@@ -565,7 +612,13 @@ browser.runtime.onMessage.addListener(
             failedCount,
 
           textLength:
-            combinedSubpageText.length
+            combinedSubpageText.length,
+
+          directFilesFound:
+            subpageDirectFiles.size,
+
+          possibleEndpointsFound:
+            subpagePossibleEndpoints.size
         }
       );
 
@@ -595,7 +648,19 @@ browser.runtime.onMessage.addListener(
           MAX_SAME_SITE_SUBPAGES,
 
         subpageText:
-          combinedSubpageText
+          combinedSubpageText,
+
+        downloadCandidates: {
+          directFiles:
+            [
+              ...subpageDirectFiles
+            ],
+
+          possibleEndpoints:
+            [
+              ...subpagePossibleEndpoints
+            ]
+        }
       };
     }
 
@@ -603,6 +668,453 @@ browser.runtime.onMessage.addListener(
   }
 );
 
+
+
+function getLikelyDownloadSubpageUrls(
+  pageUrl,
+  subpageUrls
+) {
+  const validUrls =
+    getValidatedSameSiteSubpageUrls(
+      pageUrl,
+      subpageUrls
+    );
+
+  const likelyPathPattern =
+    /(?:^|\/)(?:download|downloads|download-app|downloadapp|get-app|getapp|install|installer|android|apk|app|apps|mobile|release|releases)(?:\/|$|\?|#)/i;
+
+  return validUrls
+    .map(
+      (url) => {
+        let score =
+          0;
+
+        try {
+          const parsed =
+            new URL(
+              url
+            );
+
+          if (
+            likelyPathPattern.test(
+              parsed.pathname
+            )
+          ) {
+            score +=
+              5;
+          }
+
+          if (
+            /(?:download|install|android|apk|app|release|mobile)/i.test(
+              parsed.search
+            )
+          ) {
+            score +=
+              3;
+          }
+
+          if (
+            /(?:download|install|android|apk|app|release|mobile)/i.test(
+              parsed.hash
+            )
+          ) {
+            score +=
+              3;
+          }
+        } catch {
+          return null;
+        }
+
+        return {
+          url,
+          score
+        };
+      }
+    )
+    .filter(
+      Boolean
+    )
+    .filter(
+      (item) =>
+        item.score >
+        0
+    )
+    .sort(
+      (left, right) =>
+        right.score -
+        left.score
+    )
+    .slice(
+      0,
+      MAX_RENDERED_DOWNLOAD_SUBPAGES
+    )
+    .map(
+      (item) =>
+        item.url
+    );
+}
+
+function waitForTabLoad(
+  tabId,
+  timeoutMs =
+    15000
+) {
+  return new Promise(
+    (resolve) => {
+      let finished =
+        false;
+
+      let timeoutId =
+        null;
+
+      function finish(
+        result
+      ) {
+        if (
+          finished
+        ) {
+          return;
+        }
+
+        finished =
+          true;
+
+        clearTimeout(
+          timeoutId
+        );
+
+        browser.tabs.onUpdated.removeListener(
+          onUpdated
+        );
+
+        resolve(
+          result
+        );
+      }
+
+      function onUpdated(
+        updatedTabId,
+        changeInfo
+      ) {
+        if (
+          updatedTabId ===
+          tabId &&
+          changeInfo.status ===
+          "complete"
+        ) {
+          finish(
+            {
+              completed:
+                true,
+
+              timedOut:
+                false
+            }
+          );
+        }
+      }
+
+      browser.tabs.onUpdated.addListener(
+        onUpdated
+      );
+
+      timeoutId =
+        setTimeout(
+          () => {
+            finish(
+              {
+                completed:
+                  false,
+
+                timedOut:
+                  true
+              }
+            );
+          },
+          timeoutMs
+        );
+
+      browser.tabs.get(
+        tabId
+      )
+        .then(
+          (tab) => {
+            if (
+              tab.status ===
+              "complete"
+            ) {
+              finish(
+                {
+                  completed:
+                    true,
+
+                  timedOut:
+                    false
+                }
+              );
+            }
+          }
+        )
+        .catch(
+          () => {
+            finish(
+              {
+                completed:
+                  false,
+
+                timedOut:
+                  true
+              }
+            );
+          }
+        );
+    }
+  );
+}
+
+
+function wait(
+  milliseconds
+) {
+  return new Promise(
+    (resolve) => {
+      setTimeout(
+        resolve,
+        milliseconds
+      );
+    }
+  );
+}
+
+async function requestRenderedSubpageAnalysis(
+  tabId,
+  retries = 8
+) {
+  for (
+    let attempt = 0;
+    attempt < retries;
+    attempt++
+  ) {
+    try {
+      const response =
+        await browser.tabs.sendMessage(
+          tabId,
+          {
+            type:
+              "ANALYZE_WEBPAGE"
+          }
+        );
+
+      if (
+        response &&
+        response.ok
+      ) {
+        return response;
+      }
+    } catch {
+      /*
+        The tab may have loaded but content.js may not yet be
+        attached or the application may still be rendering.
+      */
+    }
+
+    await wait(
+      500
+    );
+  }
+
+  return null;
+}
+
+
+
+async function scanRenderedDownloadSubpages(
+  pageUrl,
+  subpageUrls,
+  windowId
+) {
+  const candidateUrls =
+    getLikelyDownloadSubpageUrls(
+      pageUrl,
+      subpageUrls
+    );
+
+  const directFiles =
+    new Set();
+
+  const possibleEndpoints =
+    new Set();
+
+  const downloadActions =
+    new Set();
+
+  const scannedUrls =
+    [];
+
+  const failedUrls =
+    [];
+
+  for (
+    const subpageUrl of candidateUrls
+  ) {
+    let temporaryTab =
+      null;
+
+    try {
+      temporaryTab =
+        await browser.tabs.create(
+          {
+            url:
+              subpageUrl,
+
+            active:
+              false,
+
+            windowId:
+              typeof windowId ===
+              "number"
+                ? windowId
+                : undefined
+          }
+        );
+
+     const tabLoadResult =
+       await waitForTabLoad(
+         temporaryTab.id
+       );
+
+     console.log(
+       "[background] Rendered scan tab load:",
+       {
+         url:
+           subpageUrl,
+
+         tabLoadResult
+       }
+     );
+
+      /*
+        Give JavaScript frameworks time to mount their route,
+        fetch data, and create rendered controls.
+      */
+      await wait(
+        1500
+      );
+
+      const analysis =
+        await requestRenderedSubpageAnalysis(
+          temporaryTab.id
+        );
+
+      if (
+        !analysis ||
+        !analysis.ok
+      ) {
+        throw new Error(
+          "No rendered analysis response."
+        );
+      }
+
+      (
+        analysis.downloadCandidates?.directFiles ||
+        []
+      ).forEach(
+        (url) =>
+          directFiles.add(
+            url
+          )
+      );
+
+      (
+        analysis.downloadCandidates?.possibleEndpoints ||
+        []
+      ).forEach(
+        (url) =>
+          possibleEndpoints.add(
+            url
+          )
+      );
+
+      (
+        analysis.downloadCandidates?.downloadActions ||
+        []
+      ).forEach(
+        (action) =>
+          downloadActions.add(
+            action
+          )
+      );
+
+      scannedUrls.push(
+        subpageUrl
+      );
+
+      console.log(
+        "[background] Rendered download subpage scanned:",
+        subpageUrl
+      );
+    } catch (error) {
+      failedUrls.push(
+        subpageUrl
+      );
+
+      console.warn(
+        "[background] Could not scan rendered subpage:",
+        subpageUrl,
+        error
+      );
+    } finally {
+      if (
+        temporaryTab?.id
+      ) {
+        try {
+          await browser.tabs.remove(
+            temporaryTab.id
+          );
+        } catch {
+          /*
+            The tab may have been closed by navigation or by the
+            user before the scanner completed.
+          */
+        }
+      }
+    }
+  }
+
+  return {
+    ok: true,
+
+    candidateCount:
+      candidateUrls.length,
+
+    scannedCount:
+      scannedUrls.length,
+
+    failedCount:
+      failedUrls.length,
+
+    scannedUrls,
+
+    failedUrls,
+
+    downloadCandidates: {
+      directFiles:
+        [
+          ...directFiles
+        ],
+
+      possibleEndpoints:
+        [
+          ...possibleEndpoints
+        ],
+
+      downloadActions:
+        [
+          ...downloadActions
+        ]
+    }
+  };
+}
 
 
 async function autoScanVisibleTab(
@@ -4802,8 +5314,17 @@ function getValidatedSameSiteSubpageUrls(
       /*
         A fragment is not a separate page.
       */
-      candidateUrl.hash =
-        "";
+      const isSpaRoute =
+        candidateUrl.hash.startsWith(
+          "#/"
+        );
+
+      if (
+        !isSpaRoute
+      ) {
+        candidateUrl.hash =
+          "";
+      }
 
       /*
         Do not scan the starting page twice.
@@ -4991,6 +5512,316 @@ function extractReadableTextFromHtml(
 }
 
 
+function collectDownloadCandidatesFromHtml(
+  html,
+  pageUrl
+) {
+  const directFiles =
+    new Set();
+
+  const possibleEndpoints =
+    new Set();
+
+  if (
+    !html ||
+    !pageUrl
+  ) {
+    return {
+      directFiles: [],
+      possibleEndpoints: []
+    };
+  }
+
+  let page;
+
+  try {
+    page =
+      new URL(
+        pageUrl
+      );
+  } catch {
+    return {
+      directFiles: [],
+      possibleEndpoints: []
+    };
+  }
+
+  const parser =
+    new DOMParser();
+
+  const document =
+    parser.parseFromString(
+      html,
+      "text/html"
+    );
+
+  const directFilePattern =
+    /\.(?:apk|xapk|apks|aab|dmg|pkg|exe|msi|msix|msixbundle|deb|rpm|appimage|mobileconfig|config|plist|zip|rar|7z|iso|img)(?:[?#]|$)/i;
+
+  const endpointPathPattern =
+    /(?:^|\/)(?:download|downloads|download-app|downloadapp|get-app|getapp|install|installer|apk|android|app-download|file-download|files)(?:\/|$|\?|#)/i;
+
+  function resolveHttpUrl(
+    value
+  ) {
+    if (
+      typeof value !==
+      "string"
+    ) {
+      return "";
+    }
+
+    const cleanValue =
+      value
+        .trim()
+        .replace(
+          /\\\//g,
+          "/"
+        )
+        .replace(
+          /^[("'`]+|[)"'`,.;]+$/g,
+          ""
+        );
+
+    if (
+      !cleanValue ||
+      /^(?:javascript|data|mailto|tel|sms|smsto):/i.test(
+        cleanValue
+      )
+    ) {
+      return "";
+    }
+
+    try {
+      const url =
+        new URL(
+          cleanValue,
+          page.href
+        );
+
+      if (
+        url.protocol !==
+          "http:" &&
+        url.protocol !==
+          "https:"
+      ) {
+        return "";
+      }
+
+      const isSpaRoute =
+        url.hash.startsWith(
+          "#/"
+        );
+
+      if (
+        !isSpaRoute
+      ) {
+        url.hash =
+          "";
+      }
+
+      return url.href;
+    } catch {
+      return "";
+    }
+  }
+
+  function addCandidate(
+    value
+  ) {
+    const url =
+      resolveHttpUrl(
+        value
+      );
+
+    if (
+      !url
+    ) {
+      return;
+    }
+
+    if (
+      directFilePattern.test(
+        url
+      )
+    ) {
+      directFiles.add(
+        url
+      );
+
+      return;
+    }
+
+    try {
+      const parsed =
+        new URL(
+          url
+        );
+
+      const looksLikeEndpoint =
+        endpointPathPattern.test(
+          parsed.pathname
+        ) ||
+        /(?:download|install|apk|android|app|file)/i.test(
+          parsed.search
+        );
+
+      if (
+        looksLikeEndpoint
+      ) {
+        possibleEndpoints.add(
+          parsed.href
+        );
+      }
+    } catch {
+      // Ignore malformed values.
+    }
+  }
+
+  function collectUrlsFromText(
+    value
+  ) {
+    if (
+      typeof value !==
+      "string" ||
+      !value
+    ) {
+      return;
+    }
+
+    const normalized =
+      value.replace(
+        /\\\//g,
+        "/"
+      );
+
+    const absoluteUrls =
+      normalized.match(
+        /https?:\/\/[^\s"'<>\\]+/gi
+      ) || [];
+
+    absoluteUrls.forEach(
+      (url) => {
+        addCandidate(
+          url
+        );
+      }
+    );
+
+    const relativeUrls =
+      normalized.match(
+        /(?:\/(?:[a-z0-9._~!$&'()*+,;=:@%-]+\/?)+)(?:\?[^\s"'<>\\]*)?/gi
+      ) || [];
+
+    relativeUrls.forEach(
+      (url) => {
+        addCandidate(
+          url
+        );
+      }
+    );
+  }
+
+  document
+    .querySelectorAll(
+      "a[href], area[href], button, [onclick], [data-url], [data-download], [data-href], [data-link], form[action], iframe[src], frame[src], object[data], embed[src]"
+    )
+    .forEach(
+      (element) => {
+        [
+          "href",
+          "src",
+          "data",
+          "action",
+          "onclick",
+          "data-url",
+          "data-download",
+          "data-href",
+          "data-link"
+        ].forEach(
+          (attributeName) => {
+            const value =
+              (
+                element.getAttribute(
+                  attributeName
+                ) ||
+                ""
+              ).trim();
+
+            if (
+              !value
+            ) {
+              return;
+            }
+
+            addCandidate(
+              value
+            );
+
+            collectUrlsFromText(
+              value
+            );
+          }
+        );
+
+        Array.from(
+          element.attributes ||
+          []
+        ).forEach(
+          (attribute) => {
+            if (
+              !/^data-/i.test(
+                attribute.name
+              )
+            ) {
+              return;
+            }
+
+            addCandidate(
+              attribute.value ||
+              ""
+            );
+
+            collectUrlsFromText(
+              attribute.value ||
+              ""
+            );
+          }
+        );
+      }
+    );
+
+  Array.from(
+    document.scripts
+  ).forEach(
+    (script) => {
+      addCandidate(
+        script.src ||
+        ""
+      );
+
+      collectUrlsFromText(
+        script.src ||
+        ""
+      );
+
+      collectUrlsFromText(
+        script.textContent ||
+        ""
+      );
+    }
+  );
+
+  return {
+    directFiles:
+      [...directFiles],
+
+    possibleEndpoints:
+      [...possibleEndpoints]
+  };
+}
+
+
 function collectSameSiteLinksFromHtml(
   html,
   pageUrl,
@@ -5097,8 +5928,17 @@ function collectSameSiteLinksFromHtml(
           return;
         }
 
-        candidateUrl.hash =
-          "";
+        const isSpaRoute =
+          candidateUrl.hash.startsWith(
+            "#/"
+          );
+
+        if (
+          !isSpaRoute
+        ) {
+          candidateUrl.hash =
+            "";
+        }
 
         if (
           candidateUrl.href ===
