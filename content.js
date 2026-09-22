@@ -107,9 +107,192 @@ browser.runtime.onMessage.addListener(
     ) {
       return analyzeDynamicWebpage();
     }
-    return false;
+    
+    if (
+      message.type ===
+      "FIND_SAFE_DOWNLOAD_CONTROLS"
+    ) {
+      return findSafeDownloadControls();
+    }
+    if (
+      message.type ===
+      "CLICK_SAFE_DOWNLOAD_CONTROL"
+    ) {
+      return Promise.resolve(
+        clickSafeDownloadControl(
+          message.selector
+        )
+      );
+    }
+    
+    
+    if (
+      message.type ===
+      "GET_DOWNLOAD_PAGE_DIAGNOSTIC"
+    ) {
+      const pageText =
+        (
+          document.body?.innerText ||
+          ""
+        )
+          .replace(
+            /\s+/g,
+            " "
+          )
+          .trim();
+
+      return Promise.resolve(
+        {
+          ok: true,
+
+          url:
+            window.location.href,
+
+          visibility:
+            document.visibilityState,
+
+          textHasQuickInstallation:
+            /quick\s+installation/i.test(
+              pageText
+            ),
+
+          textPreview:
+            pageText.slice(
+              0,
+              500
+            )
+        }
+      );
+    }
+    
+    if (
+      message.type ===
+      "DEBUG_INSTALLATION_TEXT"
+    ) {
+      return Promise.resolve(
+        debugInstallationText()
+      );
+    }
+    
+   
+    
+   return false;
   }
 );
+
+function debugInstallationText() {
+  const matches =
+    [];
+
+  const root =
+    document.body ||
+    document.documentElement;
+
+  if (!root) {
+    return {
+      ok: false,
+      error: "No document root found."
+    };
+  }
+
+  const walker =
+    document.createTreeWalker(
+      root,
+      NodeFilter.SHOW_TEXT
+    );
+
+  let node;
+
+  while (
+    (node = walker.nextNode())
+  ) {
+    const text =
+      (
+        node.nodeValue ||
+        ""
+      )
+        .replace(
+          /\s+/g,
+          " "
+        )
+        .trim();
+
+    if (
+      !/^(quick|complete)\s+installation$/i.test(
+        text
+      )
+    ) {
+      continue;
+    }
+
+    const parent =
+      node.parentElement;
+
+    const parentInfo =
+      parent
+        ? {
+            tagName:
+              parent.tagName,
+
+            className:
+              typeof parent.className ===
+              "string"
+                ? parent.className
+                : "",
+
+            text:
+              (
+                parent.innerText ||
+                parent.textContent ||
+                ""
+              )
+                .replace(
+                  /\s+/g,
+                  " "
+                )
+                .trim()
+                .slice(
+                  0,
+                  300
+                ),
+
+            outerHTML:
+              parent.outerHTML.slice(
+                0,
+                1000
+              ),
+
+            parentTagName:
+              parent.parentElement?.tagName ||
+              "",
+
+            parentClassName:
+              typeof parent.parentElement?.className ===
+              "string"
+                ? parent.parentElement.className
+                : "",
+
+            parentOuterHTML:
+              parent.parentElement?.outerHTML?.slice(
+                0,
+                1500
+              ) || ""
+          }
+        : null;
+
+    matches.push({
+      text,
+      parent: parentInfo
+    });
+  }
+
+  return {
+    ok: true,
+    url: window.location.href,
+    matchCount: matches.length,
+    matches
+  };
+}
 
 async function analyzeDynamicWebpage() {
   const mergedText =
@@ -1943,7 +2126,7 @@ function collectDownloadCandidates() {
     new Set();
 
   const directFilePattern =
-    /\.(?:apk|xapk|apks|aab|dmg|pkg|exe|msi|msix|msixbundle|deb|rpm|appimage|mobileconfig|config|plist|zip|rar|7z|iso|img)(?:[?#]|$)/i;
+    /\.(?:apk|xapk|apks|aab|ipa|mobileconfig|plist|config|cfg|conf|ini|exe|msi|msix|msixbundle|dmg|pkg|deb|rpm|appimage|iso|img|bin|zip|rar|7z|tar|gz|bz2|xz)(?:[?#]|$)/i;
 
   const endpointPathPattern =
     /(?:^|\/)(?:download|downloads|download-app|downloadapp|get-app|getapp|install|installer|apk|android|app-download|file-download|files)(?:\/|$|\?|#)/i;
@@ -2313,6 +2496,256 @@ function collectDownloadCandidates() {
  };
 }
 
+function findSafeDownloadControls() {
+  const controlAttribute =
+    "data-qr-download-control";
+
+  const root =
+    document.body ||
+    document.documentElement;
+
+  if (!root) {
+    return {
+      ok: false,
+      version: "TEXT-NODE-FINDER-V1",
+      controls: []
+    };
+  }
+
+  const wantedLabels =
+    new Map(
+      [
+        [
+          "quick installation",
+          "Quick installation"
+        ],
+        [
+          "complete installation",
+          "Complete Installation"
+        ]
+      ]
+    );
+
+  const found =
+    new Map();
+
+  const walker =
+    document.createTreeWalker(
+      root,
+      NodeFilter.SHOW_TEXT
+    );
+
+  let node;
+
+  while (
+    (node = walker.nextNode())
+  ) {
+    const label =
+      (
+        node.nodeValue ||
+        ""
+      )
+        .replace(
+          /\s+/g,
+          " "
+        )
+        .trim();
+
+    const normalizedLabel =
+      label.toLowerCase();
+
+    if (
+      !wantedLabels.has(
+        normalizedLabel
+      )
+    ) {
+      continue;
+    }
+
+    const element =
+      node.parentElement;
+
+    if (!element) {
+      continue;
+    }
+
+    /*
+      Confirm we found the expected Vue control rather than
+      unrelated page text.
+    */
+    const expectedClass =
+      normalizedLabel ===
+      "quick installation"
+        ? "btn1"
+        : "btn2";
+
+    if (
+      !element.classList.contains(
+        expectedClass
+      )
+    ) {
+      continue;
+    }
+
+    if (
+      found.has(
+        normalizedLabel
+      )
+    ) {
+      continue;
+    }
+
+    found.set(
+      normalizedLabel,
+      {
+        element,
+        label:
+          wantedLabels.get(
+            normalizedLabel
+          )
+      }
+    );
+  }
+
+  const controls =
+    [
+      "quick installation",
+      "complete installation"
+    ]
+      .map(
+        (
+          normalizedLabel,
+          index
+        ) => {
+          const foundControl =
+            found.get(
+              normalizedLabel
+            );
+
+          if (!foundControl) {
+            return null;
+          }
+
+          const controlId =
+            `qr-download-${Date.now()}-${index}`;
+
+          foundControl.element.setAttribute(
+            controlAttribute,
+            controlId
+          );
+
+          return {
+            label:
+              foundControl.label,
+
+            selector:
+              `[${controlAttribute}="${controlId}"]`,
+
+            className:
+              foundControl.element.className
+          };
+        }
+      )
+      .filter(
+        Boolean
+      );
+
+  return {
+    ok: true,
+    version: "TEXT-NODE-FINDER-V1",
+    controls
+  };
+}
+
+
+function clickSafeDownloadControl(
+  selector
+) {
+  if (
+    typeof selector !==
+    "string" ||
+    !selector
+  ) {
+    return {
+      ok: false,
+      error: "Missing control selector."
+    };
+  }
+
+  let element;
+
+  try {
+    element =
+      document.querySelector(
+        selector
+      );
+  } catch {
+    return {
+      ok: false,
+      error: "Invalid control selector."
+    };
+  }
+
+  if (
+    !element
+  ) {
+    return {
+      ok: false,
+      error: "Download control no longer exists."
+    };
+  }
+
+  if (
+    element.closest(
+      "form"
+    )
+  ) {
+    return {
+      ok: false,
+      error: "Refused to click a form control."
+    };
+  }
+
+  const label =
+    (
+      element.getAttribute(
+        "aria-label"
+      ) ||
+      element.getAttribute(
+        "title"
+      ) ||
+      element.value ||
+      element.innerText ||
+      element.textContent ||
+      ""
+    )
+      .replace(
+        /\s+/g,
+        " "
+      )
+      .trim()
+      .slice(
+        0,
+        160
+      );
+
+  element.scrollIntoView(
+    {
+      block: "center",
+      inline: "center"
+    }
+  );
+
+  element.click();
+
+  return {
+    ok: true,
+    label:
+      label ||
+      "Download control"
+  };
+}
+
 
 function collectDownloadActions() {
   const actions =
@@ -2335,7 +2768,7 @@ function collectDownloadActions() {
     );
 
   const directFilePattern =
-    /\.(?:apk|xapk|apks|aab|ipa)(?:[?#]|$)/i;
+    /\.(?:apk|xapk|apks|aab|ipa|mobileconfig|plist|config|cfg|conf|ini|exe|msi|msix|msixbundle|dmg|pkg|deb|rpm|appimage|iso|img|bin|zip|rar|7z|tar|gz|bz2|xz)(?:[?#]|$)/i;
 
   const downloadPathPattern =
     /(?:^|\/)(?:download|downloads|get-app|getapp|download-app|downloadapp|install|installer|apk|android|release|releases|file-download|files)(?:\/|$|\?|#)/i;
@@ -3284,5 +3717,109 @@ async function collectSameSiteSubpageUrls() {
 
   return mergedSubpageUrls;
 }
+
+document.addEventListener(
+  "click",
+  (event) => {
+    const target =
+      event.target.closest(
+        "a, button, div, span, li, p, section, [role='button'], [onclick], [data-url], [data-download], [data-href], [data-link]"
+      );
+
+    if (
+      !target
+    ) {
+      return;
+    }
+
+    const text =
+      (
+        target.innerText ||
+        target.textContent ||
+        ""
+      )
+        .replace(
+          /\s+/g,
+          " "
+        )
+        .trim()
+        .slice(
+          0,
+          160
+        );
+
+    const className =
+      typeof target.className ===
+      "string"
+        ? target.className
+        : "";
+
+    const isDownloadAction =
+      /\b(?:download|install|get\s+(?:the\s+)?app|apk|xapk|apks|aab|android\s+app|mobile\s+app)\b/i.test(
+        text
+      ) ||
+      /(?:^|[\s_-])(?:btn|button|action|cta)(?:\d+|[\s_-]|$)|(?:download|install|android|apk|app)/i.test(
+        className
+      );
+
+    if (
+      !isDownloadAction
+    ) {
+      return;
+    }
+
+    browser.runtime.sendMessage({
+      type:
+        "APK_DOWNLOAD_BUTTON_CLICKED",
+
+      pageUrl:
+        window.location.href,
+
+      element: {
+        tagName:
+          target.tagName,
+
+        text,
+
+        href:
+          target.getAttribute(
+            "href"
+          ) ||
+          "",
+
+        className,
+
+        dataUrl:
+          target.getAttribute(
+            "data-url"
+          ) ||
+          "",
+
+        dataDownload:
+          target.getAttribute(
+            "data-download"
+          ) ||
+          "",
+
+        dataHref:
+          target.getAttribute(
+            "data-href"
+          ) ||
+          "",
+
+        dataLink:
+          target.getAttribute(
+            "data-link"
+          ) ||
+          ""
+      },
+
+      detectedAt:
+        new Date().toISOString()
+    });
+  },
+  true
+);
+
 
 

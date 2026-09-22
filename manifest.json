@@ -11,7 +11,8 @@
     "<all_urls>",
     "clipboardWrite",
     "storage",
-    "downloads"
+    "downloads",
+    "webRequest"
   ],
 
   "background": {

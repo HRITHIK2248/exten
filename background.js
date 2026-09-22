@@ -210,61 +210,6 @@ async function handleKeyboardCommand(
 }
 
 
-document.addEventListener(
-  "click",
-  (event) => {
-    const target = event.target.closest(
-      "a, button, [role='button'], [onclick], [data-url], [data-download]"
-    );
-
-    if (!target) {
-      return;
-    }
-
-    const href = target.href || "";
-    const text = (target.innerText || target.textContent || "")
-      .replace(/\s+/g, " ")
-      .trim();
-
-    const dataset = {
-      ...target.dataset
-    };
-
-    const looksDownloadRelated =
-      /\.apk(?:$|[?#])/i.test(href) ||
-      /\b(download|install|android|apk|get app)\b/i.test(text) ||
-      Object.values(dataset).some((value) =>
-        /\b(download|install|android|apk)\b/i.test(
-          String(value)
-        )
-      );
-
-    if (!looksDownloadRelated) {
-      return;
-    }
-
-    browser.runtime.sendMessage({
-      type: "APK_DOWNLOAD_BUTTON_CLICKED",
-      pageUrl: location.href,
-      element: {
-        tagName: target.tagName,
-        text,
-        href,
-        dataset,
-        onclick: target.getAttribute("onclick") || ""
-      },
-      detectedAt: new Date().toISOString()
-    });
-  },
-  true
-);
-
-const DEFAULT_SCREENSHOT_SETTINGS = {
-  borderSpacing: 12,
-  borderThickness: 6,
-  arrowSize: 0.11,
-  arrowDirection: "auto"
-};
 
 
 browser.runtime.onMessage.addListener(
@@ -926,7 +871,240 @@ async function requestRenderedSubpageAnalysis(
   return null;
 }
 
+function isDirectAppFileUrl(
+  value
+) {
+  return /\.(?:apk|xapk|apks|aab|ipa|mobileconfig|plist|config|cfg|conf|ini|exe|msi|msix|msixbundle|dmg|pkg|deb|rpm|appimage|iso|img|bin|zip|rar|7z|tar|gz|bz2|xz)(?:[?#]|$)/i.test(
+    value ||
+      ""
+  );
+}
 
+function isPossibleDownloadEndpoint(
+  value
+) {
+  try {
+    const url =
+      new URL(
+        value
+      );
+
+    return /(?:^|\/)(?:download|downloads|download-app|downloadapp|get-app|getapp|install|installer|apk|android|release|releases|file-download|files)(?:\/|$|\?|#)/i.test(
+      url.pathname
+    ) ||
+    /(?:download|install|apk|android|app|file)/i.test(
+      url.search
+    );
+  } catch {
+    return false;
+  }
+}
+
+function observeTabDownloadRequests(
+  tabId
+) {
+  const directFiles =
+    new Set();
+
+  const possibleEndpoints =
+    new Set();
+
+  const downloads =
+    new Set();
+
+  function recordUrl(
+    value
+  ) {
+    if (
+      typeof value !==
+      "string" ||
+      !/^https?:\/\//i.test(
+        value
+      )
+    ) {
+      return;
+    }
+
+    if (
+      isDirectAppFileUrl(
+        value
+      )
+    ) {
+      directFiles.add(
+        value
+      );
+
+      return;
+    }
+
+    if (
+      isPossibleDownloadEndpoint(
+        value
+      )
+    ) {
+      possibleEndpoints.add(
+        value
+      );
+    }
+  }
+
+  function onBeforeRequest(
+    details
+  ) {
+    if (
+      details.tabId !==
+      tabId
+    ) {
+      return;
+    }
+
+    recordUrl(
+      details.url
+    );
+  }
+
+  function onBeforeRedirect(
+    details
+  ) {
+    if (
+      details.tabId !==
+      tabId
+    ) {
+      return;
+    }
+
+    recordUrl(
+      details.url
+    );
+
+    recordUrl(
+      details.redirectUrl
+    );
+  }
+
+  function onDownloadCreated(
+    item
+  ) {
+    if (
+      item.tabId !==
+      tabId
+    ) {
+      return;
+    }
+
+    recordUrl(
+      item.url
+    );
+
+    if (
+      item.finalUrl
+    ) {
+      recordUrl(
+        item.finalUrl
+      );
+    }
+
+    downloads.add(
+      item.id
+    );
+
+    browser.downloads.cancel(
+      item.id
+    ).catch(
+      () => {
+        /*
+          The download may have already completed or been removed.
+        */
+      }
+    );
+  }
+
+  browser.webRequest.onBeforeRequest.addListener(
+    onBeforeRequest,
+    {
+      urls: [
+        "<all_urls>"
+      ],
+      tabId
+    }
+  );
+
+  browser.webRequest.onBeforeRedirect.addListener(
+    onBeforeRedirect,
+    {
+      urls: [
+        "<all_urls>"
+      ],
+      tabId
+    }
+  );
+
+  browser.downloads.onCreated.addListener(
+    onDownloadCreated
+  );
+
+  return {
+    stop() {
+      browser.webRequest.onBeforeRequest.removeListener(
+        onBeforeRequest
+      );
+
+      browser.webRequest.onBeforeRedirect.removeListener(
+        onBeforeRedirect
+      );
+
+      browser.downloads.onCreated.removeListener(
+        onDownloadCreated
+      );
+    },
+
+    getResults() {
+      return {
+        directFiles:
+          [
+            ...directFiles
+          ],
+
+        possibleEndpoints:
+          [
+            ...possibleEndpoints
+          ],
+
+        downloadIds:
+          [
+            ...downloads
+          ]
+      };
+    }
+  };
+}
+
+async function requestSafeDownloadControls(
+  tabId
+) {
+  return browser.tabs.sendMessage(
+    tabId,
+    {
+      type:
+        "FIND_SAFE_DOWNLOAD_CONTROLS"
+    }
+  );
+}
+
+async function clickSafeDownloadControlInTab(
+  tabId,
+  selector
+) {
+  return browser.tabs.sendMessage(
+    tabId,
+    {
+      type:
+        "CLICK_SAFE_DOWNLOAD_CONTROL",
+
+      selector
+    }
+  );
+}
 
 async function scanRenderedDownloadSubpages(
   pageUrl,
@@ -998,14 +1176,14 @@ async function scanRenderedDownloadSubpages(
         fetch data, and create rendered controls.
       */
       await wait(
-        1500
+        6000
       );
 
       const analysis =
         await requestRenderedSubpageAnalysis(
           temporaryTab.id
         );
-
+      
       if (
         !analysis ||
         !analysis.ok
@@ -1044,6 +1222,197 @@ async function scanRenderedDownloadSubpages(
             action
           )
       );
+      
+      const diagnostic =
+        await browser.tabs.sendMessage(
+          temporaryTab.id,
+          {
+            type:
+              "GET_DOWNLOAD_PAGE_DIAGNOSTIC"
+          }
+        );
+
+      console.log(
+        "[background] Temporary download-page diagnostic:",
+        diagnostic
+      );
+      
+      const debugInstallation =
+        await browser.tabs.sendMessage(
+          temporaryTab.id,
+          {
+            type:
+              "DEBUG_INSTALLATION_TEXT"
+          }
+        );
+
+      console.log(
+        "[background] Installation text diagnostic:",
+         debugInstallation
+      );
+      
+      const controls =
+        (
+          debugInstallation?.matches ||
+          []
+        )
+          .map(
+            (match) => {
+              const label =
+                (
+                  match.text ||
+                  ""
+                )
+                  .replace(
+                    /\s+/g,
+                    " "
+                  )
+                  .trim();
+
+              const className =
+                match.parent?.className ||
+                "";
+
+              if (
+                label ===
+                  "Quick installation" &&
+                className ===
+                  "btn1"
+              ) {
+                return {
+                  label,
+                  selector: "div.btn1"
+                };
+              }
+
+              if (
+                label ===
+                  "Complete Installation" &&
+                className ===
+                  "btn2"
+              ) {
+                return {
+                  label,
+                  selector: "div.btn2"
+                };
+              }
+
+              return null;
+            }
+          )
+          .filter(
+            Boolean
+          );
+      
+      console.log(
+        "[background] Safe download controls found:",
+        {
+          url:
+            subpageUrl,
+
+          count:
+            controls.length,
+
+          labels:
+            controls.map(
+              (control) =>
+                control.label
+            )
+        }
+      );
+
+      for (
+        const control of controls
+      ) {
+        if (
+          !control?.selector
+        ) {
+          continue;
+        }
+
+        const requestObserver =
+          observeTabDownloadRequests(
+            temporaryTab.id
+          );
+
+        try {
+          const clickResult =
+            await clickSafeDownloadControlInTab(
+              temporaryTab.id,
+              control.selector
+            );
+
+          if (
+            clickResult?.ok
+          ) {
+            downloadActions.add(
+              clickResult.label ||
+                control.label ||
+                "Download control"
+            );
+          } else {
+            console.warn(
+              "[background] Download-control click skipped:",
+              {
+                url:
+                  subpageUrl,
+
+                label:
+                  control.label,
+
+                error:
+                  clickResult?.error ||
+                    "Unknown click error."
+              }
+            );
+          }
+
+          /*
+            Allow redirects and browser download creation events to
+            arrive after the controlled click.
+          */
+          await wait(
+            1800
+          );
+
+          const observed =
+            requestObserver.getResults();
+
+          observed.directFiles.forEach(
+            (url) =>
+              directFiles.add(
+                url
+              )
+          );
+
+          observed.possibleEndpoints.forEach(
+            (url) =>
+              possibleEndpoints.add(
+                url
+              )
+          );
+
+          console.log(
+            "[background] Download-control observation:",
+            {
+              pageUrl:
+                subpageUrl,
+
+              label:
+                clickResult?.label ||
+                control.label,
+
+              directFiles:
+                observed.directFiles,
+
+              possibleEndpoints:
+                observed.possibleEndpoints
+            }
+          );
+        } finally {
+          requestObserver.stop();
+        }
+      }
 
       scannedUrls.push(
         subpageUrl
@@ -5556,7 +5925,7 @@ function collectDownloadCandidatesFromHtml(
     );
 
   const directFilePattern =
-    /\.(?:apk|xapk|apks|aab|dmg|pkg|exe|msi|msix|msixbundle|deb|rpm|appimage|mobileconfig|config|plist|zip|rar|7z|iso|img)(?:[?#]|$)/i;
+    /\.(?:apk|xapk|apks|aab|ipa|mobileconfig|plist|config|cfg|conf|ini|exe|msi|msix|msixbundle|dmg|pkg|deb|rpm|appimage|iso|img|bin|zip|rar|7z|tar|gz|bz2|xz|json|xml|yaml|yml)(?:[?#]|$)/i;
 
   const endpointPathPattern =
     /(?:^|\/)(?:download|downloads|download-app|downloadapp|get-app|getapp|install|installer|apk|android|app-download|file-download|files)(?:\/|$|\?|#)/i;
@@ -6018,6 +6387,70 @@ async function saveDetectedApk(downloadId) {
     );
   }
 }
+
+
+browser.downloads.onCreated.addListener(
+  async (
+    downloadItem
+  ) => {
+    if (
+      !isApkDownload(
+        downloadItem
+      )
+    ) {
+      return;
+    }
+
+    const apkDetection = {
+      id:
+        downloadItem.id,
+
+      filename:
+        downloadItem.filename ||
+        "",
+
+      url:
+        downloadItem.finalUrl ||
+        downloadItem.url ||
+        "",
+
+      sourceUrl:
+        downloadItem.referrer ||
+        "",
+
+      mime:
+        downloadItem.mime ||
+        "",
+
+      fileSize:
+        downloadItem.fileSize ||
+        0,
+
+      totalBytes:
+        downloadItem.totalBytes ||
+        0,
+
+      state:
+        downloadItem.state ||
+        "in_progress",
+
+      detectedAt:
+        new Date().toISOString()
+    };
+
+    await browser.storage.local.set(
+      {
+        latestDetectedApk:
+          apkDetection
+      }
+    );
+
+    console.log(
+      "[background] APK download started:",
+      apkDetection
+    );
+  }
+);
 
 browser.downloads.onChanged.addListener(async (delta) => {
   if (delta.state?.current !== "complete") {
