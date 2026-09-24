@@ -533,5 +533,514 @@ input:focus-visible {
   border: 1px solid var(--border);
   border-radius: 8px;
 }
+/*
+  ============================================================
+  Popup startup loader
+  ------------------------------------------------------------
+  A seven-segment 8-shaped structure.
 
+  Animation sequence:
+  1. Energy travels through each segment.
+  2. The vertical segments and middle segment reveal an H.
+  3. The animation fades and starts again.
+  ============================================================
+*/
+
+.popup-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+  min-height: 280px;
+
+  background:
+    radial-gradient(
+      circle at center,
+      rgba(0, 229, 255, 0.11),
+      transparent 34%
+    ),
+    radial-gradient(
+      circle at 50% 58%,
+      rgba(168, 85, 247, 0.1),
+      transparent 42%
+    ),
+    var(--bg);
+
+  opacity: 1;
+  visibility: visible;
+
+  transition:
+    opacity 0.28s ease,
+    visibility 0.28s ease;
+}
+
+/*
+  Hide the normal popup interface until JavaScript finishes
+  restoring the saved result.
+*/
+#appContent {
+  visibility: hidden;
+  opacity: 0;
+
+  transition:
+    opacity 0.25s ease;
+}
+
+/*
+  JavaScript will add popup-ready to the body when startup
+  work has finished.
+*/
+body.popup-ready #appContent {
+  visibility: visible;
+  opacity: 1;
+}
+
+body.popup-ready .popup-loader {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+/* Show loader again as an overlay when popup-loading is active */
+body.popup-ready.popup-loading .popup-loader {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: none;
+}
+
+/*
+  ============================================================
+  Seven-segment structure
+  ============================================================
+*/
+
+.h-loader {
+  position: relative;
+
+  width: 112px;
+  height: 160px;
+
+  filter:
+    drop-shadow(
+      0 0 10px
+      rgba(0, 229, 255, 0.16)
+    );
+}
+
+
+/*
+  Every segment remains dimly visible so the complete
+  digital 8 structure can always be seen.
+*/
+.h-segment {
+  position: absolute;
+  display: block;
+
+  overflow: hidden;
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(29, 49, 82, 0.72),
+      rgba(20, 34, 61, 0.92)
+    );
+
+  border:
+    1px solid
+    rgba(40, 81, 124, 0.72);
+
+  border-radius: 3px;
+
+  box-shadow:
+    inset 0 0 7px
+    rgba(0, 229, 255, 0.05);
+}
+
+
+/*
+  Travelling energy overlay.
+*/
+.h-segment::after {
+  content: "";
+
+  position: absolute;
+  inset: 0;
+
+  background:
+    linear-gradient(
+      90deg,
+      var(--violet),
+      #ffffff,
+      var(--cyan)
+    );
+
+  opacity: 0;
+
+  box-shadow:
+    0 0 9px
+    rgba(0, 229, 255, 0.95),
+    0 0 20px
+    rgba(0, 229, 255, 0.72),
+    0 0 32px
+    rgba(168, 85, 247, 0.52);
+
+  animation:
+    h-energy-pulse
+    3.6s
+    ease-in-out
+    infinite;
+
+  animation-delay:
+    var(--segment-delay);
+}
+
+
+/*
+  ============================================================
+  Segment positions
+  ============================================================
+*/
+
+.h-segment-top,
+.h-segment-middle,
+.h-segment-bottom {
+  left: 18px;
+
+  width: 76px;
+  height: 12px;
+}
+
+.h-segment-upper-left,
+.h-segment-upper-right,
+.h-segment-lower-left,
+.h-segment-lower-right {
+  width: 12px;
+  height: 58px;
+}
+
+
+/* First segment */
+
+.h-segment-top {
+  top: 0;
+
+  --segment-delay: 0s;
+}
+
+
+/* Second segment */
+
+.h-segment-upper-right {
+  top: 10px;
+  right: 0;
+
+  --segment-delay: 0.28s;
+}
+
+
+/* Third segment */
+
+.h-segment-middle {
+  top: 74px;
+
+  --segment-delay: 0.56s;
+}
+
+
+/* Fourth segment */
+
+.h-segment-lower-right {
+  top: 84px;
+  right: 0;
+
+  --segment-delay: 0.84s;
+}
+
+
+/* Fifth segment */
+
+.h-segment-bottom {
+  bottom: 0;
+
+  --segment-delay: 1.12s;
+}
+
+
+/* Sixth segment */
+
+.h-segment-lower-left {
+  top: 84px;
+  left: 0;
+
+  --segment-delay: 1.4s;
+}
+
+
+/* Seventh segment */
+
+.h-segment-upper-left {
+  top: 10px;
+  left: 0;
+
+  --segment-delay: 1.68s;
+}
+
+
+/*
+  ============================================================
+  H reveal layer
+  ------------------------------------------------------------
+  Only the four vertical segments and the middle segment
+  participate in the final H reveal.
+  ============================================================
+*/
+
+.h-segment-upper-left::before,
+.h-segment-upper-right::before,
+.h-segment-middle::before,
+.h-segment-lower-left::before,
+.h-segment-lower-right::before {
+  content: "";
+
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+
+  background:
+    linear-gradient(
+      135deg,
+      #ffffff 0%,
+      var(--cyan) 35%,
+      var(--violet) 100%
+    );
+
+  opacity: 0;
+
+  box-shadow:
+    0 0 10px
+    rgba(0, 229, 255, 1),
+    0 0 22px
+    rgba(0, 229, 255, 0.8),
+    0 0 38px
+    rgba(168, 85, 247, 0.62);
+
+  animation:
+    h-logo-reveal
+    3.6s
+    ease-in-out
+    infinite;
+}
+
+
+/*
+  Add an outer glow when the final H appears.
+*/
+.h-loader::after {
+  content: "";
+
+  position: absolute;
+  inset: -24px;
+
+  pointer-events: none;
+
+  background:
+    radial-gradient(
+      ellipse at center,
+      rgba(0, 229, 255, 0.2),
+      rgba(168, 85, 247, 0.08) 42%,
+      transparent 70%
+    );
+
+  opacity: 0;
+
+  animation:
+    h-background-glow
+    3.6s
+    ease-in-out
+    infinite;
+}
+
+
+/*
+  ============================================================
+  Loading message
+  ============================================================
+*/
+
+.popup-loader-text {
+  margin-top: 30px;
+
+  color: var(--muted-bright);
+
+  font-size: 12px;
+  font-weight: 700;
+
+  letter-spacing: 0.13em;
+  text-align: center;
+  text-transform: uppercase;
+
+  text-shadow:
+    0 0 9px
+    rgba(0, 229, 255, 0.32);
+}
+
+.popup-loader-dots::after {
+  content: "";
+
+  display: inline-block;
+
+  width: 18px;
+
+  color: var(--cyan);
+
+  text-align: left;
+
+  animation:
+    popup-loading-dots
+    1.2s
+    steps(4, end)
+    infinite;
+}
+
+
+/*
+  ============================================================
+  Loader animations
+  ============================================================
+*/
+
+/*
+  Briefly illuminates one segment. Individual animation
+  delays make the light travel around the complete 8.
+*/
+@keyframes h-energy-pulse {
+  0%,
+  8% {
+    opacity: 0;
+    transform: scale(0.78);
+  }
+
+  11% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+
+  17% {
+    opacity: 0.82;
+    transform: scale(1);
+  }
+
+  24%,
+  100% {
+    opacity: 0;
+    transform: scale(0.84);
+  }
+}
+
+
+/*
+  After the travelling light finishes, all five H segments
+  illuminate together.
+*/
+@keyframes h-logo-reveal {
+  0%,
+  67% {
+    opacity: 0;
+  }
+
+  73% {
+    opacity: 0.35;
+  }
+
+  79%,
+  88% {
+    opacity: 1;
+  }
+
+  94% {
+    opacity: 0.42;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+
+/*
+  Adds a soft surrounding glow during the H reveal.
+*/
+@keyframes h-background-glow {
+  0%,
+  68% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+
+  80%,
+  88% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.18);
+  }
+}
+
+
+/*
+  Animated loading dots.
+*/
+@keyframes popup-loading-dots {
+  0% {
+    content: "";
+  }
+
+  25% {
+    content: ".";
+  }
+
+  50% {
+    content: "..";
+  }
+
+  75%,
+  100% {
+    content: "...";
+  }
+}
+
+
+/*
+  Accessibility: avoid continuous movement when the operating
+  system requests reduced animation.
+*/
+@media (prefers-reduced-motion: reduce) {
+  .h-segment::after,
+  .h-loader::after,
+  .popup-loader-dots::after {
+    animation: none;
+  }
+
+  .h-segment-upper-left::before,
+  .h-segment-upper-right::before,
+  .h-segment-middle::before,
+  .h-segment-lower-left::before,
+  .h-segment-lower-right::before {
+    opacity: 1;
+    animation: none;
+  }
+
+  #appContent,
+  .popup-loader {
+    transition: none;
+  }
+}
 

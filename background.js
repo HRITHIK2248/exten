@@ -254,7 +254,29 @@ browser.runtime.onMessage.addListener(
 
       return false;
     }
+    
+    if (
+      message.type ===
+      "SNAPSHOT_SELECTION"
+    ) {
+      const tabId =
+        sender.tab?.id;
 
+      if (
+        !tabId
+      ) {
+    return false;
+      }
+
+      await captureSnapshotSelection(
+        message,
+        tabId
+      );
+
+      return {
+        ok: true
+      };
+    }
 
     if (
       message.type ===
@@ -1001,34 +1023,11 @@ function observeTabDownloadRequests(
     ) {
       recordUrl(
         item.finalUrl
-      );
-    }
+      ); 
+    } 
 
-    downloads.add(
-      item.id
-    );
-
-    browser.downloads.cancel(
-      item.id
-    ).catch(
-      () => {
-        /*
-          The download may have already completed or been removed.
-        */
-      }
-    );
-  }
-
-  browser.webRequest.onBeforeRequest.addListener(
-    onBeforeRequest,
-    {
-      urls: [
-        "<all_urls>"
-      ],
-      tabId
-    }
-  );
-
+   } 
+    
   browser.webRequest.onBeforeRedirect.addListener(
     onBeforeRedirect,
     {
@@ -1655,7 +1654,11 @@ async function captureSnapshotSelection(
       await browser.tabs.get(
         tabId
       );
-
+    
+    console.log(
+      "[background] Capturing snapshot screenshot..."
+    );
+    
     const screenshot =
       await browser.tabs.captureVisibleTab(
         tab.windowId,
@@ -1670,7 +1673,11 @@ async function captureSnapshotSelection(
         message.selection,
         tab.url || ""
       );
-
+    
+    console.log(
+      "[background] Snapshot image created."
+    );
+    
     result.scannedAt =
       Date.now();
       
@@ -1698,10 +1705,18 @@ async function captureSnapshotSelection(
     result.copiedAutomatically =
       false;
 
+    await browser.storage.local.remove(
+      "latestPageAnalysis"
+    );
+
     await browser.storage.local.set({
       latestResult: result
     });
-
+    
+    console.log(
+      "[background] Snapshot result saved."
+    );
+    
     await sendResult(
       tabId,
       result
@@ -1711,13 +1726,49 @@ async function captureSnapshotSelection(
       tab
     );
   } catch (error) {
-    await handleScanError(
-      tabId,
+    console.error(
+      "[background] Snapshot capture failed:",
       error
+    );
+
+    const result = {
+      ok: false,
+
+      type: "snapshot",
+
+      network:
+        "Webpage snapshot",
+
+      copiedAutomatically:
+        false,
+
+      scannedAt:
+        Date.now(),
+  
+      error:
+        error?.message ||
+        "Could not capture the selected webpage area."
+   };
+
+    await browser.storage.local.set({
+      latestResult: result
+    });
+
+    await sendResult(
+      tabId,
+      result
+    );
+
+    const safeTab =
+      await getSafeTab(
+        tabId
+      );
+
+    await openResultPopup(
+      safeTab
     );
   }
 }
-
 async function automaticallyCopyResult(
   result
 ) {
@@ -1779,6 +1830,10 @@ async function saveAndShowResult(
   result,
   tab
 ) {
+  await browser.storage.local.remove(
+    "latestPageAnalysis"
+  );
+
   await browser.storage.local.set({
     latestResult: result
   });
@@ -2522,6 +2577,42 @@ async function createSnapshotImage(
       )
   };
 
+  selectedBounds.left =
+    Math.max(
+      0,
+      Math.min(
+        sourceCanvas.width,
+        selectedBounds.left
+      )
+    );
+
+  selectedBounds.top =
+    Math.max(
+      0,
+      Math.min(
+        sourceCanvas.height,
+        selectedBounds.top
+      )
+    );
+
+  selectedBounds.right =
+    Math.max(
+      0,
+      Math.min(
+        sourceCanvas.width,
+       selectedBounds.right
+      )
+    );
+
+  selectedBounds.bottom =
+    Math.max(
+      0,
+      Math.min(
+        sourceCanvas.height,
+        selectedBounds.bottom
+      )
+    );
+
   selectedBounds.width =
     selectedBounds.right -
     selectedBounds.left;
@@ -2530,6 +2621,14 @@ async function createSnapshotImage(
     selectedBounds.bottom -
     selectedBounds.top;
 
+  if (
+    selectedBounds.width <= 0 ||
+    selectedBounds.height <= 0
+  ) {
+    throw new Error(
+      "The selected Snapshot area is outside the captured screenshot."
+    );
+  }
   const headerHeight =
     35;
 
@@ -6400,7 +6499,7 @@ browser.downloads.onCreated.addListener(
     ) {
       return;
     }
-
+    
     const apkDetection = {
       id:
         downloadItem.id,
@@ -6451,6 +6550,7 @@ browser.downloads.onCreated.addListener(
     );
   }
 );
+
 
 browser.downloads.onChanged.addListener(async (delta) => {
   if (delta.state?.current !== "complete") {

@@ -714,7 +714,22 @@ function handleSelectionEnd(event) {
     type: "SNAPSHOT_SELECTION",
     selection,
     selectedText
-  });
+  })
+    .then(
+      () => {
+        console.log(
+          "[content] Snapshot message delivered."
+        );
+      }
+    )
+    .catch(
+      (error) => {
+        console.error(
+          "[content] Snapshot message failed:",
+          error
+        );
+      }
+    );
 
   event.preventDefault();
 }

@@ -1244,31 +1244,208 @@ pageAnalysisAddressesButton.addEventListener(
   }
 );
 
+/*
+  ============================================================
+  Initialize popup
+  ------------------------------------------------------------
+  Allows the browser to display the startup loader before
+  restoring and rendering the previously saved result.
+  ============================================================
+*/
+
+async function initializePopup() {
+  try {
+    /*
+      Wait for two animation frames so the browser can first
+      paint the loader before result restoration begins.
+    */
+    await waitForPopupFrame();
+    await waitForPopupFrame();
+
+    await loadSavedPopupState();
+  } catch (error) {
+    console.error(
+      "[popup] Could not initialize popup:",
+      error
+    );
+  } finally {
+    /*
+      Reveal the popup even if loading fails, preventing the
+      extension from remaining permanently on the loader.
+    */
+    document.body.classList.add(
+      "popup-ready"
+    );
+  }
+}
 
 
+function waitForPopupFrame() {
+  return new Promise(
+    (resolve) => {
+      requestAnimationFrame(
+        resolve
+      );
+    }
+  );
+}
+
+/*
+  Show and hide the loader overlay after startup.
+  ------------------------------------------------
+  popup-loading does NOT affect #appContent; it only
+  controls the visibility of .popup-loader.
+*/
+
+let popupBusyCount = 0;
+
+function showPopupLoader(
+  message = "Loading extension"
+) {
+  popupBusyCount += 1;
+
+  const loaderText =
+    document.querySelector(
+      ".popup-loader-text"
+    );
+
+  if (
+    loaderText
+  ) {
+    loaderText.textContent =
+      `${message}...`;
+  }
+
+  document.body.classList.add(
+    "popup-loading"
+  );
+
+  document.body.setAttribute(
+    "aria-busy",
+    "true"
+  );
+}
+
+function hidePopupLoader() {
+  popupBusyCount =
+    Math.max(
+      0,
+      popupBusyCount - 1
+    );
+
+  /*
+    Keep the loader visible if another asynchronous operation
+    is still running.
+  */
+  if (
+    popupBusyCount > 0
+  ) {
+    return;
+  }
+
+  document.body.classList.remove(
+    "popup-loading"
+  );
+
+  document.body.setAttribute(
+    "aria-busy",
+    "false"
+  );
+}
 /*
   ============================================================
   12. Load saved result
   ============================================================
 */
 
-loadLatestResult();
+emptyState.textContent =
+  "Loading saved result…";
 
-async function loadLatestResult() {
+emptyState.classList.remove(
+  "hidden"
+);
+
+requestAnimationFrame(
+  () => {
+    setTimeout(
+      () => {
+        initializePopup();
+      },
+      0
+    );
+  }
+);
+
+async function loadSavedPopupState() {
   try {
     const data =
       await browser.storage.local.get(
-        "latestResult"
+        [
+          "latestResult",
+          "latestPageAnalysis"
+        ]
       );
 
+    const result =
+      data.latestResult ||
+      null;
+
+    const analysis =
+      data.latestPageAnalysis ||
+      null;
+
+    const resultTime =
+      Number(
+        result?.scannedAt
+      ) || 0;
+
+    const analysisTime =
+      Number(
+        analysis?.savedAt
+      )
+        ? new Date(
+            analysis.savedAt
+          ).getTime()
+        : 0;
+
     if (
-      data.latestResult
+      analysis &&
+      analysisTime >
+        resultTime
+    ) {
+      renderSavedPageAnalysis(
+        analysis
+      );
+
+      return;
+    }
+
+    if (
+      result
     ) {
       renderResult(
-        data.latestResult
+        result
       );
+
+      return;
     }
-  } catch (error) {
+
+    if (
+      analysis
+    ) {
+      renderSavedPageAnalysis(
+        analysis
+      );
+
+      return;
+    }
+
+    showEmpty(
+      "No scan result yet."
+    );
+  } catch (
+    error
+  ) {
     showEmpty(
       `Could not load result: ${
         error.message
@@ -1277,6 +1454,89 @@ async function loadLatestResult() {
   }
 }
 
+async function savePageAnalysis(
+  analysis
+) {
+  await browser.storage.local.set({
+    latestPageAnalysis:
+      analysis
+  });
+}
+
+function renderSavedPageAnalysis(
+  analysis
+) {
+  emptyState.classList.add(
+    "hidden"
+  );
+
+  resultCard.classList.remove(
+    "hidden"
+  );
+
+  resultHeading.textContent =
+    "Webpage Analysis";
+
+  paymentInfo.classList.add(
+    "hidden"
+  );
+
+  addressSection.classList.add(
+    "hidden"
+  );
+
+  pixSection.classList.add(
+    "hidden"
+  );
+
+  qrisSection.classList.add(
+    "hidden"
+  );
+
+  imageSection.classList.add(
+    "hidden"
+  );
+
+  rawPayloadSection.classList.add(
+    "hidden"
+  );
+
+  details.innerHTML =
+    "";
+
+  copyStatus.textContent =
+    "";
+
+  resetUpiPhoneDisplay();
+  resetWebsiteDisplay();
+  resetEmailDisplay();
+  resetContactDisplay();
+  resetEventDisplay();
+  resetSnapshotVisibility();
+
+  renderPhoneDetails(
+    null
+  );
+
+  renderSmsDetails(
+    null
+  );
+
+  renderPageAnalysis(
+    analysis.text ||
+      "",
+
+    analysis.pageLinks ||
+      [],
+
+    analysis.downloadCandidates ||
+      {}
+  );
+
+  pageAnalysisStatus.textContent =
+    analysis.status ||
+    "Analysis complete.";
+}
 
 
 
@@ -1298,6 +1558,11 @@ async function startScan() {
 
   scanButton.textContent =
     "Scanning...";
+
+  // Show loader while we talk to the active tab
+  showPopupLoader(
+    "Starting QR scanner"
+  );
 
   try {
     const tabs =
@@ -1326,9 +1591,13 @@ async function startScan() {
         tab.id
     });
 
+    // On success the popup will close, so no need to hide loader here
     window.close();
   } catch (error) {
+    // If something fails, restore buttons and hide loader
     restoreButtons();
+
+    hidePopupLoader();
 
     showEmpty(
       `Could not start scan: ${
@@ -1337,7 +1606,6 @@ async function startScan() {
     );
   }
 }
-
 
 /*
   ============================================================
@@ -1357,6 +1625,11 @@ async function startSnapshot() {
 
   snapshotButton.textContent =
     "Select area...";
+
+  // Show loader while we set up snapshot selection
+  showPopupLoader(
+    "Starting snapshot"
+  );
 
   try {
     const tabs =
@@ -1385,9 +1658,13 @@ async function startSnapshot() {
       }
     );
 
+    // On success the popup will close
     window.close();
   } catch (error) {
+    // If something fails, restore buttons and hide loader
     restoreButtons();
+
+    hidePopupLoader();
 
     showEmpty(
       `Could not start snapshot: ${
@@ -1396,7 +1673,6 @@ async function startSnapshot() {
     );
   }
 }
-
 
 /*
   ============================================================
@@ -1429,18 +1705,43 @@ function restoreButtons() {
 */
 
 async function clearResult() {
-  latestResult =
-    null;
+  clearButton.disabled =
+    true;
 
-  await browser.storage.local.remove(
-    "latestResult"
+  showPopupLoader(
+    "Clearing result"
   );
 
-  resetAllSections();
+  try {
+    latestResult =
+      null;
 
-  showEmpty(
-    "No scan result yet."
-  );
+    await browser.storage.local.remove(
+      [
+        "latestResult",
+        "latestPageAnalysis"
+      ]
+    );
+
+    resetAllSections();
+
+    showEmpty(
+      "No scan result yet."
+    );
+  } catch (
+    error
+  ) {
+    showEmpty(
+      `Could not clear result: ${
+        error.message
+      }`
+    );
+  } finally {
+    clearButton.disabled =
+      false;
+
+    hidePopupLoader();
+  }
 }
 
 
@@ -5813,6 +6114,10 @@ async function analyzeWebpage() {
 
   analyzePageButton.textContent =
     "Analyzing...";
+    
+  showPopupLoader(
+    "Analyzing webpage"
+  );
 
   emptyState.classList.add(
     "hidden"
@@ -5922,6 +6227,14 @@ async function analyzeWebpage() {
     "";
 
   try {
+  
+    await browser.storage.local.remove(
+      "latestResult"
+    );
+
+    latestResult =
+      null;
+    
     const tabs =
       await browser.tabs.query({
         active: true,
@@ -6155,6 +6468,28 @@ async function analyzeWebpage() {
       subpageResponse?.limited
         ? `${scanMessage} Limited to 20 pages.`
         : scanMessage;
+        
+        
+    await savePageAnalysis(
+      {
+        text:
+          combinedAnalysisText,
+
+        pageLinks:
+          response.links ||
+          [],
+
+        downloadCandidates:
+          mergedDownloadCandidates,
+
+        status:
+          pageAnalysisStatus.textContent,
+
+        savedAt:
+          new Date().toISOString()
+      }
+    );     
+        
   } catch (error) {
     pageAnalysisStatus.textContent =
       error.message ||
@@ -6173,6 +6508,8 @@ async function analyzeWebpage() {
 
     analyzePageButton.textContent =
       "Analyze webpage";
+      
+    hidePopupLoader(); 
   }
 }
 
