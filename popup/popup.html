@@ -15,10 +15,12 @@
       href="popup.css"
     >
   </head>
+    
+    
 
-      <body> 
- 
-    <!-- Startup loader -->
+
+    <body>
+
     <div
       id="popupLoader"
       class="popup-loader"
@@ -26,31 +28,537 @@
       aria-live="polite"
       aria-label="Loading extension"
     >
-      <div
-        class="h-loader"
+            <div
+        class="h-loader h-forge-loader"
         aria-hidden="true"
       >
-        <span class="h-segment h-segment-top"></span>
-        <span class="h-segment h-segment-upper-left"></span>
-        <span class="h-segment h-segment-upper-right"></span>
-        <span class="h-segment h-segment-middle"></span>
-        <span class="h-segment h-segment-lower-left"></span>
-        <span class="h-segment h-segment-lower-right"></span>
-        <span class="h-segment h-segment-bottom"></span>
+        <svg
+          class="h-forge-logo"
+          viewBox="0 0 40 48"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <defs>
+            <!-- Main energy color -->
+            <linearGradient
+              id="hForgeEnergy"
+              x1="0"
+              y1="0"
+              x2="1"
+              y2="1"
+            >
+              <stop
+                offset="0%"
+                stop-color="#8b5cf6"
+              />
+
+              <stop
+                offset="42%"
+                stop-color="#22d3ee"
+              />
+
+              <stop
+                offset="72%"
+                stop-color="#ffffff"
+              />
+
+              <stop
+                offset="100%"
+                stop-color="#22d3ee"
+              />
+            </linearGradient>
+
+            <!-- Final H color -->
+            <linearGradient
+              id="hForgeSignature"
+              x1="0"
+              y1="0"
+              x2="1"
+              y2="0"
+            >
+              <stop
+                offset="0%"
+                stop-color="#22d3ee"
+              />
+
+              <stop
+                offset="50%"
+                stop-color="#ffffff"
+              />
+
+              <stop
+                offset="100%"
+                stop-color="#22d3ee"
+              />
+            </linearGradient>
+          </defs>
+
+          <!--
+            ========================================================
+            Dim rectangular figure-eight circuit
+            ========================================================
+          -->
+
+          <g class="forge-circuit">
+
+            <!-- Top rail with clipped corners -->
+            <path
+              class="forge-track forge-track-top"
+              d="
+                M 8 4
+                H 32
+                L 36 8
+              "
+            />
+
+            <!-- Upper-left side -->
+            <path
+              class="forge-track forge-track-upper-left"
+              d="
+                M 8 4
+                L 4 8
+                V 20
+                L 8 24
+              "
+            />
+
+            <!-- Upper-right side -->
+            <path
+              class="forge-track forge-track-upper-right"
+              d="
+                M 32 4
+                L 36 8
+                V 20
+                L 32 24
+              "
+            />
+
+            <!-- Connected middle rail -->
+            <path
+              class="forge-track forge-track-middle"
+              d="
+                M 8 24
+                H 32
+              "
+            />
+
+            <!-- Lower-left side -->
+            <path
+              class="forge-track forge-track-lower-left"
+              d="
+                M 8 24
+                L 4 28
+                V 40
+                L 8 44
+              "
+            />
+
+            <!-- Lower-right side -->
+            <path
+              class="forge-track forge-track-lower-right"
+              d="
+                M 32 24
+                L 36 28
+                V 40
+                L 32 44
+              "
+            />
+
+            <!-- Bottom rail with clipped corners -->
+            <path
+              class="forge-track forge-track-bottom"
+              d="
+                M 8 44
+                H 32
+                L 36 40
+              "
+            />
+          </g>
+
+          <!--
+            ========================================================
+            Four energy trails
+            Each one begins near a different corner and moves toward
+            the centre of the circuit.
+            ========================================================
+          -->
+
+          <g class="forge-energy-trails">
+
+            <path
+              class="
+                forge-energy-trail
+                forge-energy-trail-one
+              "
+              pathLength="100"
+              d="
+                M 8 4
+                L 4 8
+                V 20
+                L 8 24
+                H 20
+              "
+            />
+
+            <path
+              class="
+                forge-energy-trail
+                forge-energy-trail-two
+              "
+              pathLength="100"
+              d="
+                M 32 4
+                L 36 8
+                V 20
+                L 32 24
+                H 20
+              "
+            />
+
+            <path
+              class="
+                forge-energy-trail
+                forge-energy-trail-three
+              "
+              pathLength="100"
+              d="
+                M 8 44
+                L 4 40
+                V 28
+                L 8 24
+                H 20
+              "
+            />
+
+            <path
+              class="
+                forge-energy-trail
+                forge-energy-trail-four
+              "
+              pathLength="100"
+              d="
+                M 32 44
+                L 36 40
+                V 28
+                L 32 24
+                H 20
+              "
+            />
+          </g>
+
+          <!--
+            ========================================================
+            Bright cores of the four travelling lights
+            ========================================================
+          -->
+
+          <g class="forge-energy-cores">
+
+            <path
+              class="
+                forge-energy-core
+                forge-energy-core-one
+              "
+              pathLength="100"
+              d="
+                M 8 4
+                L 4 8
+                V 20
+                L 8 24
+                H 20
+              "
+            />
+
+            <path
+              class="
+                forge-energy-core
+                forge-energy-core-two
+              "
+              pathLength="100"
+              d="
+                M 32 4
+                L 36 8
+                V 20
+                L 32 24
+                H 20
+              "
+            />
+
+            <path
+              class="
+                forge-energy-core
+                forge-energy-core-three
+              "
+              pathLength="100"
+              d="
+                M 8 44
+                L 4 40
+                V 28
+                L 8 24
+                H 20
+              "
+            />
+
+            <path
+              class="
+                forge-energy-core
+                forge-energy-core-four
+              "
+              pathLength="100"
+              d="
+                M 32 44
+                L 36 40
+                V 28
+                L 32 24
+                H 20
+              "
+            />
+          </g>
+
+          <!--
+            ========================================================
+            Centre collision
+            ========================================================
+          -->
+
+          <circle
+            class="forge-centre-wave"
+            cx="20"
+            cy="24"
+            r="3"
+          />
+
+          <circle
+            class="forge-centre-core"
+            cx="20"
+            cy="24"
+            r="1.4"
+          />
+
+          <!--
+            ========================================================
+            Final custom H signature
+            The diagonal end cuts make it different from a typed H.
+            ========================================================
+          -->
+
+                    <!--
+            ========================================================
+            Structural H
+            Two reinforced pillars, a centre bridge, and four braces.
+            ========================================================
+          -->
+
+                    <!--
+            ========================================================
+            Simple connected H
+            The centre bridge joins both vertical pillars.
+            ========================================================
+          -->
+
+                    <!--
+            ========================================================
+            Four uninterrupted corner-to-H energy routes
+            ========================================================
+          -->
+
+          <g class="forge-continuous-rays">
+
+            <!-- Top-left source to upper-left H endpoint -->
+            <path
+              class="forge-continuous-ray forge-continuous-ray-one"
+              pathLength="100"
+              d="
+                M 4 7
+                H 36
+                V 24
+                H 12
+                V 7
+              "
+            />
+
+            <!-- Top-right source to upper-right H endpoint -->
+            <path
+              class="forge-continuous-ray forge-continuous-ray-two"
+              pathLength="100"
+              d="
+                M 36 7
+                H 4
+                V 24
+                H 28
+                V 7
+              "
+            />
+
+            <!-- Bottom-left source to lower-left H endpoint -->
+            <path
+              class="forge-continuous-ray forge-continuous-ray-three"
+              pathLength="100"
+              d="
+                M 4 41
+                H 36
+                V 24
+                H 12
+                V 41
+              "
+            />
+
+            <!-- Bottom-right source to lower-right H endpoint -->
+            <path
+              class="forge-continuous-ray forge-continuous-ray-four"
+              pathLength="100"
+              d="
+                M 36 41
+                H 4
+                V 24
+                H 28
+                V 41
+              "
+            />
+
+          </g>
+
+          <g class="forge-final-h">
+
+            <!-- Left vertical pillar -->
+            <path
+              class="forge-h-line forge-h-left"
+              pathLength="100"
+              d="M 12 7 L 12 41"
+            />
+
+            <!-- Right vertical pillar -->
+            <path
+              class="forge-h-line forge-h-right"
+              pathLength="100"
+              d="M 28 7 L 28 41"
+            />
+
+            <!-- Connected centre bridge -->
+            <path
+              class="forge-h-line forge-h-middle"
+              pathLength="100"
+              d="M 12 24 L 28 24"
+            />
+
+            <!-- Existing centre scan -->
+            <path
+              class="forge-h-scan"
+              pathLength="100"
+              d="M 12 24 L 28 24"
+            />
+                      <!--
+            Four energy routes splitting from the centre of the H.
+            Centre point: 20,24
+          -->
+          </g>
+
+          <g class="forge-h-rays">
+
+            <!-- Centre to upper-left -->
+            <path
+              class="forge-h-ray forge-h-ray-up-left"
+              pathLength="100"
+              d="M 20 24 H 12 V 7"
+            />
+
+            <!-- Centre to lower-left -->
+            <path
+              class="forge-h-ray forge-h-ray-down-left"
+              pathLength="100"
+              d="M 20 24 H 12 V 41"
+            />
+
+            <!-- Centre to upper-right -->
+            <path
+              class="forge-h-ray forge-h-ray-up-right"
+              pathLength="100"
+              d="M 20 24 H 28 V 7"
+            />
+
+            <!-- Centre to lower-right -->
+            <path
+              class="forge-h-ray forge-h-ray-down-right"
+              pathLength="100"
+              d="M 20 24 H 28 V 41"
+            />
+
+          </g>          
+                    <!-- Energy core where one light splits into four rays -->
+          <circle
+            class="forge-h-split-core"
+            cx="20"
+            cy="24"
+            r="1.5"
+          />
+
+          <!-- Expanding ring created by the split -->
+          <circle
+            class="forge-h-split-ring"
+            cx="20"
+            cy="24"
+            r="2.4"
+          />
+                    <!-- Four endpoint flashes -->
+
+          <g class="forge-h-endpoints">
+
+            <circle
+              class="forge-h-endpoint forge-h-endpoint-top-left"
+              cx="12"
+              cy="7"
+              r="1.25"
+            />
+
+            <circle
+              class="forge-h-endpoint forge-h-endpoint-bottom-left"
+              cx="12"
+              cy="41"
+              r="1.25"
+            />
+
+            <circle
+              class="forge-h-endpoint forge-h-endpoint-top-right"
+              cx="28"
+              cy="7"
+              r="1.25"
+            />
+
+            <circle
+              class="forge-h-endpoint forge-h-endpoint-bottom-right"
+              cx="28"
+              cy="41"
+              r="1.25"
+            />
+
+          </g>
+          
+                    <!-- Fully charged H overlay -->
+
+          <g class="forge-h-charged">
+
+            <path
+              class="forge-h-charge-line"
+              d="M 12 7 L 12 41"
+            />
+
+            <path
+              class="forge-h-charge-line"
+              d="M 28 7 L 28 41"
+            />
+
+            <path
+              class="forge-h-charge-line forge-h-charge-middle"
+              d="M 12 24 L 28 24"
+            />
+
+          </g>
+        </svg>
       </div>
 
       <div class="popup-loader-text">
         Loading extension<span class="popup-loader-dots"></span>
       </div>
     </div>
-
-    <main
-      id="appContent"
-      class="app"
-    >     
-     
-
-     
 
     <main
       id="appContent"

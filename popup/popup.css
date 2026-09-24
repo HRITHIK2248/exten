@@ -533,16 +533,13 @@ input:focus-visible {
   border: 1px solid var(--border);
   border-radius: 8px;
 }
+
+
+
 /*
   ============================================================
-  Popup startup loader
-  ------------------------------------------------------------
-  A seven-segment 8-shaped structure.
-
-  Animation sequence:
-  1. Energy travels through each segment.
-  2. The vertical segments and middle segment reveal an H.
-  3. The animation fades and starts again.
+  Clean loop-to-H loader
+  Step 3: foundation and static circuit
   ============================================================
 */
 
@@ -556,49 +553,31 @@ input:focus-visible {
   align-items: center;
   justify-content: center;
 
-  width: 100%;
   min-height: 280px;
 
   background:
     radial-gradient(
       circle at center,
-      rgba(0, 229, 255, 0.11),
-      transparent 34%
+      rgba(0, 229, 255, 0.09),
+      transparent 24%
     ),
-    radial-gradient(
-      circle at 50% 58%,
-      rgba(168, 85, 247, 0.1),
-      transparent 42%
-    ),
-    var(--bg);
+    rgba(5, 8, 22, 0.76);
+
+  backdrop-filter: blur(2px) brightness(0.55);
+  -webkit-backdrop-filter: blur(2px) brightness(0.55);
 
   opacity: 1;
   visibility: visible;
+  pointer-events: auto;
 
   transition:
     opacity 0.28s ease,
     visibility 0.28s ease;
 }
 
-/*
-  Hide the normal popup interface until JavaScript finishes
-  restoring the saved result.
-*/
-#appContent {
-  visibility: hidden;
-  opacity: 0;
-
-  transition:
-    opacity 0.25s ease;
-}
-
-/*
-  JavaScript will add popup-ready to the body when startup
-  work has finished.
-*/
-body.popup-ready #appContent {
-  visibility: visible;
-  opacity: 1;
+body:not(.popup-ready) #appContent {
+  pointer-events: none;
+  user-select: none;
 }
 
 body.popup-ready .popup-loader {
@@ -606,298 +585,530 @@ body.popup-ready .popup-loader {
   visibility: hidden;
   pointer-events: none;
 }
-/* Show loader again as an overlay when popup-loading is active */
+
 body.popup-ready.popup-loading .popup-loader {
   opacity: 1;
   visibility: visible;
   pointer-events: none;
 }
 
-/*
-  ============================================================
-  Seven-segment structure
-  ============================================================
-*/
-
 .h-loader {
-  position: relative;
-
-  width: 112px;
-  height: 160px;
-
-  filter:
-    drop-shadow(
-      0 0 10px
-      rgba(0, 229, 255, 0.16)
-    );
-}
-
-
-/*
-  Every segment remains dimly visible so the complete
-  digital 8 structure can always be seen.
-*/
-.h-segment {
-  position: absolute;
-  display: block;
-
-  overflow: hidden;
-
-  background:
-    linear-gradient(
-      135deg,
-      rgba(29, 49, 82, 0.72),
-      rgba(20, 34, 61, 0.92)
-    );
-
-  border:
-    1px solid
-    rgba(40, 81, 124, 0.72);
-
-  border-radius: 3px;
-
-  box-shadow:
-    inset 0 0 7px
-    rgba(0, 229, 255, 0.05);
-}
-
-
-/*
-  Travelling energy overlay.
-*/
-.h-segment::after {
-  content: "";
-
-  position: absolute;
-  inset: 0;
-
-  background:
-    linear-gradient(
-      90deg,
-      var(--violet),
-      #ffffff,
-      var(--cyan)
-    );
-
-  opacity: 0;
-
-  box-shadow:
-    0 0 9px
-    rgba(0, 229, 255, 0.95),
-    0 0 20px
-    rgba(0, 229, 255, 0.72),
-    0 0 32px
-    rgba(168, 85, 247, 0.52);
-
-  animation:
-    h-energy-pulse
-    3.6s
-    ease-in-out
-    infinite;
-
-  animation-delay:
-    var(--segment-delay);
-}
-
-
-/*
-  ============================================================
-  Segment positions
-  ============================================================
-*/
-
-.h-segment-top,
-.h-segment-middle,
-.h-segment-bottom {
-  left: 18px;
-
-  width: 76px;
-  height: 12px;
-}
-
-.h-segment-upper-left,
-.h-segment-upper-right,
-.h-segment-lower-left,
-.h-segment-lower-right {
-  width: 12px;
+  width: 48px;
   height: 58px;
 }
 
-
-/* First segment */
-
-.h-segment-top {
-  top: 0;
-
-  --segment-delay: 0s;
+.h-forge-logo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
 }
-
-
-/* Second segment */
-
-.h-segment-upper-right {
-  top: 10px;
-  right: 0;
-
-  --segment-delay: 0.28s;
-}
-
-
-/* Third segment */
-
-.h-segment-middle {
-  top: 74px;
-
-  --segment-delay: 0.56s;
-}
-
-
-/* Fourth segment */
-
-.h-segment-lower-right {
-  top: 84px;
-  right: 0;
-
-  --segment-delay: 0.84s;
-}
-
-
-/* Fifth segment */
-
-.h-segment-bottom {
-  bottom: 0;
-
-  --segment-delay: 1.12s;
-}
-
-
-/* Sixth segment */
-
-.h-segment-lower-left {
-  top: 84px;
-  left: 0;
-
-  --segment-delay: 1.4s;
-}
-
-
-/* Seventh segment */
-
-.h-segment-upper-left {
-  top: 10px;
-  left: 0;
-
-  --segment-delay: 1.68s;
-}
-
 
 /*
-  ============================================================
-  H reveal layer
-  ------------------------------------------------------------
-  Only the four vertical segments and the middle segment
-  participate in the final H reveal.
-  ============================================================
+  Static connected figure-eight circuit.
 */
 
-.h-segment-upper-left::before,
-.h-segment-upper-right::before,
-.h-segment-middle::before,
-.h-segment-lower-left::before,
-.h-segment-lower-right::before {
-  content: "";
+.forge-track {
+  fill: none;
+  stroke: rgba(79, 157, 194, 0.72);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
 
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-
-  background:
-    linear-gradient(
-      135deg,
-      #ffffff 0%,
-      var(--cyan) 35%,
-      var(--violet) 100%
-    );
-
-  opacity: 0;
-
-  box-shadow:
-    0 0 10px
-    rgba(0, 229, 255, 1),
-    0 0 22px
-    rgba(0, 229, 255, 0.8),
-    0 0 38px
-    rgba(168, 85, 247, 0.62);
-
-  animation:
-    h-logo-reveal
-    3.6s
-    ease-in-out
-    infinite;
+  filter:
+    drop-shadow(0 0 2px rgba(34, 211, 238, 0.5));
 }
 
-
 /*
-  Add an outer glow when the final H appears.
+  Hide animation elements temporarily.
 */
-.h-loader::after {
-  content: "";
 
-  position: absolute;
-  inset: -24px;
-
-  pointer-events: none;
-
-  background:
-    radial-gradient(
-      ellipse at center,
-      rgba(0, 229, 255, 0.2),
-      rgba(168, 85, 247, 0.08) 42%,
-      transparent 70%
-    );
-
+.forge-energy-trails,
+.forge-energy-cores,
+.forge-centre-wave,
+.forge-centre-core,
+.forge-final-h {
   opacity: 0;
-
-  animation:
-    h-background-glow
-    3.6s
-    ease-in-out
-    infinite;
 }
 
-
 /*
-  ============================================================
-  Loading message
-  ============================================================
+  Loading message.
 */
 
 .popup-loader-text {
-  margin-top: 30px;
-
+  margin-top: 10px;
   color: var(--muted-bright);
-
-  font-size: 12px;
+  font-size: 8px;
   font-weight: 700;
-
-  letter-spacing: 0.13em;
+  letter-spacing: 0.11em;
   text-align: center;
   text-transform: uppercase;
-
-  text-shadow:
-    0 0 9px
-    rgba(0, 229, 255, 0.32);
+  text-shadow: 0 0 6px rgba(0, 229, 255, 0.35);
 }
 
 .popup-loader-dots::after {
-  content: "";
-
+  content: "...";
   display: inline-block;
-
   width: 18px;
-
   color: var(--cyan);
+  text-align: left;
+}
 
+/*
+  ============================================================
+  Step 4: four corner lights
+  ============================================================
+*/
+
+.forge-energy-trails,
+.forge-energy-cores {
+  opacity: 1;
+}
+
+.forge-energy-trail,
+.forge-energy-core {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+/*
+  Long, soft trail behind each light.
+*/
+
+.forge-energy-trail {
+  stroke: url("#hForgeEnergy");
+  stroke-width: 3.2;
+
+  stroke-dasharray: 14 86;
+  stroke-dashoffset: 100;
+
+  opacity: 0;
+
+  filter:
+    drop-shadow(0 0 3px rgba(34, 211, 238, 0.8))
+    drop-shadow(0 0 6px rgba(139, 92, 246, 0.55));
+
+  animation:
+    forge-light-travel
+    5.2s
+    cubic-bezier(0.4, 0, 0.25, 1)
+    infinite;
+}
+
+/*
+  Small bright core at the front of each trail.
+*/
+
+.forge-energy-core {
+  stroke: #ffffff;
+  stroke-width: 1.8;
+
+  stroke-dasharray: 4 96;
+  stroke-dashoffset: 100;
+
+  opacity: 0;
+
+  filter:
+    drop-shadow(0 0 2px rgba(255, 255, 255, 1))
+    drop-shadow(0 0 5px rgba(34, 211, 238, 1));
+
+  animation:
+    forge-light-travel
+    5.2s
+    cubic-bezier(0.4, 0, 0.25, 1)
+    infinite;
+}
+
+/*
+  Small offsets prevent the four lights from looking perfectly
+  mechanical while keeping their centre arrival close together.
+*/
+
+.forge-energy-trail-two,
+.forge-energy-core-two {
+  animation-delay: 0.04s;
+}
+
+.forge-energy-trail-three,
+.forge-energy-core-three {
+  animation-delay: 0.08s;
+}
+
+.forge-energy-trail-four,
+.forge-energy-core-four {
+  animation-delay: 0.12s;
+}
+
+/*
+  Each path begins at a corner and ends at the centre.
+*/
+
+@keyframes forge-light-travel {
+  0% {
+    stroke-dashoffset: 100;
+    opacity: 0;
+  }
+
+  4% {
+    opacity: 1;
+  }
+
+  10% {
+    stroke-dashoffset: 94;
+    opacity: 1;
+  }
+
+  50% {
+    stroke-dashoffset: 8;
+    opacity: 1;
+  }
+
+  55% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+
+  59%,
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+
+/*
+  ============================================================
+  Step 5: centre collision
+  ============================================================
+*/
+
+.forge-centre-core {
+  fill: #ffffff;
+
+  transform-box: fill-box;
+  transform-origin: center;
+
+  filter:
+    drop-shadow(0 0 2px rgba(255, 255, 255, 1))
+    drop-shadow(0 0 6px rgba(34, 211, 238, 1))
+    drop-shadow(0 0 10px rgba(139, 92, 246, 0.8));
+
+  animation:
+    forge-centre-flash
+    5.2s
+    ease-out
+    infinite;
+}
+
+.forge-centre-wave {
+  fill: none;
+  stroke: #67e8f9;
+  stroke-width: 1.2;
+
+  transform-box: fill-box;
+  transform-origin: center;
+
+  filter:
+    drop-shadow(0 0 4px rgba(34, 211, 238, 0.9));
+
+  animation:
+    forge-centre-wave-expand
+    5.2s
+    ease-out
+    infinite;
+}
+
+/*
+  Bright flash when the four paths reach the centre.
+*/
+
+@keyframes forge-centre-flash {
+  0%,
+  52% {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+
+  55% {
+    opacity: 1;
+    transform: scale(2.4);
+  }
+
+  58% {
+    opacity: 0.85;
+    transform: scale(1);
+  }
+
+  63%,
+  100% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+}
+
+/*
+  A small shockwave expands after the collision.
+*/
+
+@keyframes forge-centre-wave-expand {
+  0%,
+  53% {
+    opacity: 0;
+    transform: scale(0.25);
+  }
+
+  56% {
+    opacity: 0.9;
+    transform: scale(0.55);
+  }
+
+  64% {
+    opacity: 0;
+    transform: scale(2.6);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(2.6);
+  }
+}
+
+/*
+  ============================================================
+  Step 6: loop transforms into H
+  ============================================================
+*/
+
+/*
+  Dim the figure-eight after the four lights collide.
+*/
+
+.forge-circuit {
+  animation:
+    forge-loop-fade
+    5.2s
+    ease-in-out
+    infinite;
+}
+
+@keyframes forge-loop-fade {
+  0%,
+  57% {
+    opacity: 1;
+  }
+
+  64%,
+  88% {
+    opacity: 0.08;
+  }
+
+  96%,
+  100% {
+    opacity: 1;
+  }
+}
+
+/*
+  Reveal the final H group after the centre collision.
+*/
+
+.forge-final-h {
+  opacity: 0;
+
+  transform-box: fill-box;
+  transform-origin: center;
+
+  filter:
+    drop-shadow(0 0 2px rgba(255, 255, 255, 1))
+    drop-shadow(0 0 5px rgba(34, 211, 238, 1))
+    drop-shadow(0 0 9px rgba(139, 92, 246, 0.8));
+
+  animation:
+    forge-h-reveal
+    5.2s
+    ease-in-out
+    infinite;
+}
+
+/*
+  Draw each part of the H.
+*/
+
+.forge-h-line {
+  fill: none;
+  stroke: url("#hForgeSignature");
+  stroke-width: 3.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+
+  vector-effect: non-scaling-stroke;
+
+  animation:
+    forge-h-draw
+    5.2s
+    cubic-bezier(0.22, 1, 0.36, 1)
+    infinite;
+}
+
+.forge-h-middle {
+  stroke-width: 3.6;
+
+  animation:
+    forge-h-middle-draw
+    5.2s
+    cubic-bezier(0.22, 1, 0.36, 1)
+    infinite;
+}
+
+/*
+  Bright scan across the completed H crossbar.
+*/
+
+.forge-h-scan {
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+
+  stroke-dasharray: 10 90;
+  stroke-dashoffset: 100;
+
+  opacity: 0;
+
+  filter:
+    drop-shadow(0 0 3px rgba(255, 255, 255, 1))
+    drop-shadow(0 0 6px rgba(34, 211, 238, 1));
+
+  animation:
+    forge-h-scan-travel
+    5.2s
+    ease-in-out
+    infinite;
+}
+
+/*
+  The H appears immediately after the centre flash.
+*/
+
+@keyframes forge-h-reveal {
+  0%,
+  57% {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+
+  63% {
+    opacity: 0.5;
+    transform: scale(0.95);
+  }
+
+  69%,
+  86% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  92% {
+    opacity: 0.35;
+    transform: scale(1.04);
+  }
+
+  98%,
+  100% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+
+/*
+  Draw the two vertical stems first.
+*/
+
+@keyframes forge-h-draw {
+  0%,
+  58% {
+    stroke-dashoffset: 100;
+  }
+
+  68%,
+  89% {
+    stroke-dashoffset: 0;
+  }
+
+  97%,
+  100% {
+    stroke-dashoffset: -100;
+  }
+}
+
+/*
+  Draw the middle bar slightly later so it completes the H.
+*/
+
+@keyframes forge-h-middle-draw {
+  0%,
+  63% {
+    stroke-dashoffset: 100;
+  }
+
+  70%,
+  89% {
+    stroke-dashoffset: 0;
+  }
+
+  97%,
+  100% {
+    stroke-dashoffset: -100;
+  }
+}
+
+/*
+  Send one bright line across the completed H.
+*/
+
+@keyframes forge-h-scan-travel {
+  0%,
+  70% {
+    stroke-dashoffset: 100;
+    opacity: 0;
+  }
+
+  73% {
+    opacity: 1;
+  }
+
+  84% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+
+  88%,
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+
+/*
+  ============================================================
+  Step 7: final cleanup
+  ============================================================
+*/
+
+/*
+  Animated loading dots.
+*/
+
+.popup-loader-dots::after {
+  content: "";
+  display: inline-block;
+  width: 18px;
+  color: var(--cyan);
   text-align: left;
 
   animation:
@@ -907,97 +1118,6 @@ body.popup-ready.popup-loading .popup-loader {
     infinite;
 }
 
-
-/*
-  ============================================================
-  Loader animations
-  ============================================================
-*/
-
-/*
-  Briefly illuminates one segment. Individual animation
-  delays make the light travel around the complete 8.
-*/
-@keyframes h-energy-pulse {
-  0%,
-  8% {
-    opacity: 0;
-    transform: scale(0.78);
-  }
-
-  11% {
-    opacity: 1;
-    transform: scale(1.08);
-  }
-
-  17% {
-    opacity: 0.82;
-    transform: scale(1);
-  }
-
-  24%,
-  100% {
-    opacity: 0;
-    transform: scale(0.84);
-  }
-}
-
-
-/*
-  After the travelling light finishes, all five H segments
-  illuminate together.
-*/
-@keyframes h-logo-reveal {
-  0%,
-  67% {
-    opacity: 0;
-  }
-
-  73% {
-    opacity: 0.35;
-  }
-
-  79%,
-  88% {
-    opacity: 1;
-  }
-
-  94% {
-    opacity: 0.42;
-  }
-
-  100% {
-    opacity: 0;
-  }
-}
-
-
-/*
-  Adds a soft surrounding glow during the H reveal.
-*/
-@keyframes h-background-glow {
-  0%,
-  68% {
-    opacity: 0;
-    transform: scale(0.8);
-  }
-
-  80%,
-  88% {
-    opacity: 1;
-    transform: scale(1.08);
-  }
-
-  100% {
-    opacity: 0;
-    transform: scale(1.18);
-  }
-}
-
-
-/*
-  Animated loading dots.
-*/
 @keyframes popup-loading-dots {
   0% {
     content: "";
@@ -1017,30 +1137,942 @@ body.popup-ready.popup-loading .popup-loader {
   }
 }
 
-
 /*
-  Accessibility: avoid continuous movement when the operating
-  system requests reduced animation.
+  Show a static H when reduced motion is enabled.
 */
+
 @media (prefers-reduced-motion: reduce) {
-  .h-segment::after,
-  .h-loader::after,
+  .forge-circuit,
+  .forge-energy-trail,
+  .forge-energy-core,
+  .forge-centre-core,
+  .forge-centre-wave,
+  .forge-final-h,
+  .forge-h-line,
+  .forge-h-middle,
+  .forge-h-scan,
   .popup-loader-dots::after {
-    animation: none;
+    animation: none !important;
   }
 
-  .h-segment-upper-left::before,
-  .h-segment-upper-right::before,
-  .h-segment-middle::before,
-  .h-segment-lower-left::before,
-  .h-segment-lower-right::before {
+  .forge-circuit {
+    opacity: 0.08;
+  }
+
+  .forge-energy-trails,
+  .forge-energy-cores,
+  .forge-centre-core,
+  .forge-centre-wave,
+  .forge-h-scan {
+    opacity: 0;
+  }
+
+  .forge-final-h {
     opacity: 1;
-    animation: none;
+    transform: none;
   }
 
-  #appContent,
+  .forge-h-line,
+  .forge-h-middle {
+    stroke-dashoffset: 0;
+  }
+
+  .popup-loader-dots::after {
+    content: "...";
+  }
+
   .popup-loader {
     transition: none;
   }
 }
+/*
+  Final H proportions
+*/
 
+.forge-h-left,
+.forge-h-right {
+  stroke-width: 3.6;
+  stroke-linecap: square;
+}
+
+.forge-h-middle {
+  stroke-width: 3.6;
+  stroke-linecap: square;
+}
+
+
+/*
+  ============================================================
+  Structural H refinement
+  ============================================================
+*/
+
+/*
+  Main vertical pillars.
+*/
+
+.forge-h-left,
+.forge-h-right {
+  stroke-width: 3.4;
+  stroke-linecap: square;
+}
+
+/*
+  Strong horizontal H bridge.
+*/
+
+.forge-h-middle {
+  stroke-width: 3.8;
+  stroke-linecap: square;
+}
+
+/*
+  Diagonal supports must remain thinner than the H itself.
+*/
+
+.forge-h-brace {
+  stroke-width: 1.7;
+  stroke-linecap: round;
+
+  opacity: 0;
+
+  animation:
+    forge-h-brace-draw
+    5.2s
+    ease-out
+    infinite;
+}
+
+/*
+  Slightly stagger the brace construction.
+*/
+
+.forge-h-brace-one {
+  animation-delay: 0s;
+}
+
+.forge-h-brace-two {
+  animation-delay: 0.04s;
+}
+
+.forge-h-brace-three {
+  animation-delay: 0.08s;
+}
+
+.forge-h-brace-four {
+  animation-delay: 0.12s;
+}
+
+/*
+  Draw the braces after the pillars begin appearing.
+*/
+
+@keyframes forge-h-brace-draw {
+  0%,
+  64% {
+    stroke-dashoffset: 100;
+    opacity: 0;
+  }
+
+  68% {
+    opacity: 0.45;
+  }
+
+  75% {
+    stroke-dashoffset: 0;
+    opacity: 0.9;
+  }
+
+  86% {
+    stroke-dashoffset: 0;
+    opacity: 0.75;
+  }
+
+  93% {
+    stroke-dashoffset: -100;
+    opacity: 0;
+  }
+
+  100% {
+    stroke-dashoffset: -100;
+    opacity: 0;
+  }
+}
+
+/*
+  ============================================================
+  Structural H — final visibility
+  ============================================================
+*/
+
+/*
+  Reliable solid stroke for every H component.
+*/
+
+.forge-h-line {
+  stroke: #55eaff;
+
+  filter:
+    drop-shadow(0 0 2px rgba(255, 255, 255, 0.95))
+    drop-shadow(0 0 5px rgba(34, 211, 238, 1))
+    drop-shadow(0 0 9px rgba(139, 92, 246, 0.7));
+}
+
+/*
+  Main H pillars.
+*/
+
+.forge-h-left,
+.forge-h-right {
+  stroke: #8ff7ff;
+  stroke-width: 3.5;
+  opacity: 1;
+}
+
+/*
+  Centre bridge is the brightest part.
+*/
+
+.forge-h-middle {
+  stroke: #ffffff;
+  stroke-width: 3.8;
+
+  filter:
+    drop-shadow(0 0 3px rgba(255, 255, 255, 1))
+    drop-shadow(0 0 7px rgba(34, 211, 238, 1));
+}
+
+/*
+  Braces remain visible but secondary.
+*/
+
+.forge-h-brace {
+  stroke: #22d3ee;
+  stroke-width: 1.6;
+
+  filter:
+    drop-shadow(0 0 3px rgba(34, 211, 238, 0.8));
+}
+
+/*
+  Keep the complete structural H visible longer.
+*/
+
+.forge-final-h {
+  animation:
+    forge-structural-h-reveal
+    5.2s
+    ease-in-out
+    infinite;
+}
+
+@keyframes forge-structural-h-reveal {
+  0%,
+  57% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+
+  63% {
+    opacity: 0.55;
+    transform: scale(0.96);
+  }
+
+  69% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  69%,
+  89% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  94% {
+    opacity: 0.4;
+    transform: scale(1.025);
+  }
+
+  98%,
+  100% {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+}
+/*
+  ============================================================
+  Professional H — controlled lighting
+  ============================================================
+*/
+
+/*
+  Remove the oversized blur surrounding the complete logo.
+*/
+
+.forge-final-h {
+  filter:
+    drop-shadow(
+      0 0 1px
+      rgba(255, 255, 255, 0.75)
+    )
+    drop-shadow(
+      0 0 3px
+      rgba(34, 211, 238, 0.55)
+    );
+}
+
+/*
+  Keep the H sharp and geometric.
+*/
+
+.forge-h-line {
+  filter: none;
+}
+
+.forge-h-left,
+.forge-h-right {
+  stroke: #67e8f9;
+  stroke-width: 2.5;
+  stroke-linecap: square;
+}
+
+.forge-h-middle {
+  stroke: #e7fcff;
+  stroke-width: 2.8;
+  stroke-linecap: square;
+
+  filter:
+    drop-shadow(
+      0 0 2px
+      rgba(34, 211, 238, 0.65)
+    );
+}
+
+/*
+  Make the structural braces visible without overpowering H.
+*/
+
+.forge-h-brace {
+  stroke: #38bde0;
+  stroke-width: 1.25;
+  stroke-linecap: round;
+
+  filter: none;
+}
+
+/*
+  Do not completely remove the surrounding circuit when H
+  appears. It remains as the frame of the engineered logo.
+*/
+
+@keyframes forge-loop-fade {
+  0%,
+  57% {
+    opacity: 1;
+  }
+
+  64%,
+  88% {
+    opacity: 0.32;
+  }
+
+  96%,
+  100% {
+    opacity: 1;
+  }
+}
+
+/*
+  Keep the circuit thin during the H reveal.
+*/
+
+.forge-track {
+  stroke-width: 1.25;
+  filter: none;
+}
+/*
+  ============================================================
+  Continuous constant-speed light
+  ============================================================
+*/
+
+.forge-energy-trail,
+.forge-energy-core {
+  animation:
+    forge-light-travel-smooth
+    5.2s
+    linear
+    infinite;
+}
+
+/*
+  Keep all four lights synchronized.
+*/
+
+.forge-energy-trail-one,
+.forge-energy-trail-two,
+.forge-energy-trail-three,
+.forge-energy-trail-four,
+.forge-energy-core-one,
+.forge-energy-core-two,
+.forge-energy-core-three,
+.forge-energy-core-four {
+  animation-delay: 0s;
+}
+
+/*
+  Constant movement from corner to centre.
+  The dash offset changes evenly without acceleration
+  or deceleration.
+*/
+
+@keyframes forge-light-travel-smooth {
+  0% {
+    stroke-dashoffset: 100;
+    opacity: 0;
+  }
+
+  2% {
+    stroke-dashoffset: 100;
+    opacity: 1;
+  }
+
+  55% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+
+  57% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+/*
+  ============================================================
+  Faster synchronized loader
+  ============================================================
+*/
+
+.forge-circuit,
+.forge-energy-trail,
+.forge-energy-core,
+.forge-centre-core,
+.forge-centre-wave,
+.forge-final-h,
+.forge-h-line,
+.forge-h-middle,
+.forge-h-brace,
+.forge-h-scan,
+.forge-h-ray {
+  animation-duration: 3.6s;
+}
+
+
+/*
+  ============================================================
+  Simple connected H
+  ============================================================
+*/
+
+.forge-h-left,
+.forge-h-right {
+  stroke: #8ff7ff;
+  stroke-width: 3.4;
+  stroke-linecap: round;
+}
+
+.forge-h-middle {
+  stroke: #ffffff;
+  stroke-width: 3.6;
+  stroke-linecap: round;
+}
+
+/*
+  Disable the old brace elements if any remain elsewhere.
+*/
+
+.forge-h-brace {
+  display: none;
+}
+
+/*
+  ============================================================
+  Four H energy routes — base styling
+  ============================================================
+*/
+
+.forge-h-ray {
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 2.2;
+
+  stroke-linecap: round;
+  stroke-linejoin: round;
+
+  stroke-dasharray: 8 92;
+  stroke-dashoffset: 100;
+
+  opacity: 0;
+
+  vector-effect: non-scaling-stroke;
+
+  filter:
+    drop-shadow(0 0 2px rgba(255, 255, 255, 1))
+    drop-shadow(0 0 5px rgba(34, 211, 238, 1));
+}
+
+/*
+  Disable the old single horizontal scan.
+  It will be replaced by the four-way split.
+*/
+
+.forge-h-scan {
+  display: none;
+}
+
+/*
+  ============================================================
+  Four-way light split from centre of H
+  ============================================================
+*/
+
+.forge-h-rays {
+  opacity: 1;
+  pointer-events: none;
+}
+
+.forge-h-ray {
+  animation:
+    forge-h-ray-split
+    3.6s
+    linear
+    infinite;
+}
+
+/*
+  All four rays must start together.
+*/
+
+.forge-h-ray-up-left,
+.forge-h-ray-down-left,
+.forge-h-ray-up-right,
+.forge-h-ray-down-right {
+  animation-delay: 0s;
+}
+
+/*
+  The split begins just after the centre collision.
+
+  0%–62%: hidden
+  64%–82%: travelling from centre to four ends
+  84% onward: hidden
+*/
+
+@keyframes forge-h-ray-split {
+  0%,
+  62% {
+    stroke-dashoffset: 100;
+    opacity: 0;
+  }
+
+  64% {
+    stroke-dashoffset: 100;
+    opacity: 1;
+  }
+
+  80% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+
+  83%,
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+
+
+/*
+  ============================================================
+  H ray endpoint flashes
+  ============================================================
+*/
+
+.forge-h-endpoint {
+  fill: #ffffff;
+  opacity: 0;
+
+  transform-box: fill-box;
+  transform-origin: center;
+
+  filter:
+    drop-shadow(0 0 2px rgba(255, 255, 255, 1))
+    drop-shadow(0 0 5px rgba(34, 211, 238, 1))
+    drop-shadow(0 0 8px rgba(139, 92, 246, 0.75));
+
+  animation:
+    forge-h-endpoint-flash
+    3.6s
+    ease-out
+    infinite;
+}
+
+/*
+  Flash when all four rays reach their destinations.
+*/
+
+@keyframes forge-h-endpoint-flash {
+  0%,
+  78% {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+
+  81% {
+    opacity: 1;
+    transform: scale(2.1);
+  }
+
+  84% {
+    opacity: 0.85;
+    transform: scale(1);
+  }
+
+  89%,
+  100% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+}
+/*
+  Reduced motion for the new H effects
+*/
+
+@media (prefers-reduced-motion: reduce) {
+  .forge-h-ray,
+  .forge-h-split-core,
+  .forge-h-split-ring,
+  .forge-h-endpoint,
+  .forge-h-charged {
+    animation: none !important;
+    opacity: 0;
+  }
+}
+/*
+  ============================================================
+  Fully charged H
+  ============================================================
+*/
+
+.forge-h-charged {
+  opacity: 0;
+  pointer-events: none;
+
+  filter:
+    drop-shadow(0 0 2px rgba(255, 255, 255, 1))
+    drop-shadow(0 0 6px rgba(34, 211, 238, 1))
+    drop-shadow(0 0 11px rgba(139, 92, 246, 0.85));
+
+  animation:
+    forge-h-charged-pulse
+    3.6s
+    ease-in-out
+    infinite;
+}
+
+.forge-h-charge-line {
+  fill: none;
+
+  stroke: #d9fcff;
+  stroke-width: 3.8;
+
+  stroke-linecap: round;
+  stroke-linejoin: round;
+
+  vector-effect: non-scaling-stroke;
+}
+
+.forge-h-charge-middle {
+  stroke: #ffffff;
+  stroke-width: 4;
+}
+
+/*
+  Activate after the four endpoint flashes.
+*/
+
+@keyframes forge-h-charged-pulse {
+  0%,
+  82% {
+    opacity: 0;
+  }
+
+  85% {
+    opacity: 1;
+  }
+
+  88% {
+    opacity: 0.72;
+  }
+
+  91% {
+    opacity: 1;
+  }
+
+  94% {
+    opacity: 0.35;
+  }
+
+  98%,
+  100% {
+    opacity: 0;
+  }
+}
+
+/*
+  ============================================================
+  Static H structure with travelling energy
+  ============================================================
+*/
+
+/*
+  Reveal the H without scaling or downward movement.
+*/
+
+.forge-final-h {
+  transform: none;
+  transform-origin: center;
+
+  animation:
+    forge-h-stage-visibility
+    3.6s
+    linear
+    infinite;
+}
+
+@keyframes forge-h-stage-visibility {
+  0%,
+  56% {
+    opacity: 0;
+  }
+
+  60% {
+    opacity: 0.48;
+  }
+
+  64%,
+  94% {
+    opacity: 1;
+  }
+
+  98%,
+  100% {
+    opacity: 0;
+  }
+}
+
+/*
+  Keep the three H lines fully connected.
+  Do not draw them from top to bottom.
+*/
+
+.forge-h-left,
+.forge-h-right,
+.forge-h-middle {
+  stroke-dasharray: none;
+  stroke-dashoffset: 0;
+
+  animation:
+    forge-h-base-charge
+    3.6s
+    linear
+    infinite;
+}
+
+/*
+  Start with a dim framework.
+  Brighten it as the four rays charge the structure.
+*/
+
+@keyframes forge-h-base-charge {
+  0%,
+  56% {
+    opacity: 0;
+  }
+
+  60% {
+    opacity: 0.25;
+  }
+
+  64% {
+    opacity: 0.42;
+  }
+
+  80% {
+    opacity: 0.68;
+  }
+
+  85%,
+  94% {
+    opacity: 1;
+  }
+
+  98%,
+  100% {
+    opacity: 0;
+  }
+}
+
+
+/*
+  ============================================================
+  Uninterrupted outer-loop-to-H light
+  ============================================================
+*/
+
+/*
+  Hide the old two-stage lights.
+  The new paths replace both systems.
+*/
+
+.forge-energy-trails,
+.forge-energy-cores,
+.forge-h-rays {
+  display: none;
+}
+
+/*
+  Four complete corner-to-H paths.
+*/
+
+.forge-continuous-rays {
+  opacity: 1;
+  pointer-events: none;
+}
+
+.forge-continuous-ray {
+  fill: none;
+
+  stroke: #ffffff;
+  stroke-width: 2.4;
+
+  stroke-linecap: round;
+  stroke-linejoin: round;
+
+  /*
+    Short bright head with a glowing tail.
+    Each route uses pathLength="100".
+  */
+  stroke-dasharray: 8 92;
+  stroke-dashoffset: 100;
+
+  opacity: 0;
+
+  vector-effect: non-scaling-stroke;
+
+  filter:
+    drop-shadow(0 0 2px rgba(255, 255, 255, 1))
+    drop-shadow(0 0 5px rgba(34, 211, 238, 1))
+    drop-shadow(0 0 8px rgba(139, 92, 246, 0.65));
+
+  animation:
+    forge-continuous-light-travel
+    3.6s
+    linear
+    infinite;
+}
+
+/*
+  All four lights begin and move together.
+*/
+
+.forge-continuous-ray-one,
+.forge-continuous-ray-two,
+.forge-continuous-ray-three,
+.forge-continuous-ray-four {
+  animation-delay: 0s;
+}
+
+/*
+  One continuous movement:
+  corner → outer circuit → centre → H → endpoint.
+
+  There is no opacity change or restart at the centre.
+*/
+
+@keyframes forge-continuous-light-travel {
+  0% {
+    stroke-dashoffset: 100;
+    opacity: 0;
+  }
+
+  2% {
+    stroke-dashoffset: 100;
+    opacity: 1;
+  }
+
+  82% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+
+  85% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+
+/*
+  Keep both the outer circuit and H framework visible
+  underneath the travelling rays.
+*/
+
+.forge-circuit {
+  opacity: 1;
+
+  animation:
+    forge-connected-framework
+    3.6s
+    linear
+    infinite;
+}
+
+@keyframes forge-connected-framework {
+  0% {
+    opacity: 0;
+  }
+
+  4%,
+  54% {
+    opacity: 1;
+  }
+
+  60% {
+    opacity: 0.55;
+  }
+
+  64%,
+  94% {
+    opacity: 0.2;
+  }
+
+  98% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
