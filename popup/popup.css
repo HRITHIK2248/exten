@@ -1973,7 +1973,7 @@ body.popup-ready.popup-loading .popup-loader {
   stroke-dasharray: 8 92;
   stroke-dashoffset: 100;
 
-  opacity: 0;
+u  opacity: 0;
 
   vector-effect: non-scaling-stroke;
 
@@ -2043,7 +2043,7 @@ body.popup-ready.popup-loading .popup-loader {
   opacity: 1;
 
   animation:
-    forge-connected-framework
+ u   forge-connected-framework
     3.6s
     linear
     infinite;
@@ -2073,6 +2073,333 @@ body.popup-ready.popup-loading .popup-loader {
   }
 
   100% {
-    opacity: 1;
+  u  opacity: 1;
   }
 }
+u
+
+
+/*
+  ============================================================
+  Softer H visibility
+  ============================================================
+*/
+
+/*
+  Keep the stationary H dim so the moving light is dominant.
+*/
+
+.forge-h-left,
+.forge-h-right {
+  stroke: rgba(143, 247, 255, 0.48);
+  stroke-width: 2.6;
+
+  filter:
+    drop-shadow(
+      0 0 3px
+      rgba(34, 211, 238, 0.35)
+    );
+}
+
+.forge-h-middle {
+  stroke: rgba(217, 252, 255, 0.58);
+  stroke-width: 2.8;
+
+  filter:
+    drop-shadow(
+      0 0 4px
+      rgba(34, 211, 238, 0.42)
+    );
+}
+
+/*
+  Reduce the final charged overlay.
+*/
+
+.forge-h-charged {
+  filter:
+    drop-shadow(
+      0 0 3px
+      rgba(34, 211, 238, 0.48)
+    );
+
+  animation:
+    forge-h-soft-charge
+    3.6s
+    ease-in-out
+    infinite;
+}
+
+.forge-h-charge-line {
+  stroke: rgba(196, 249, 255, 0.72);
+  stroke-width: 3;
+}
+
+.forge-h-charge-middle {
+  stroke: rgba(255, 255, 255, 0.78);
+  stroke-width: 3.2;
+}
+
+@keyframes forge-h-soft-charge {
+  0%,
+  82% {
+    opacity: 0;
+  }
+
+  86% {
+    opacity: 0.62;
+  }
+
+  91% {
+    opacity: 0.78;
+  }
+
+  95% {
+    opacity: 0.25;
+  }
+
+  98%,
+  100% {
+    opacity: 0;
+  }
+}
+/*
+  ============================================================
+  FINAL CLEAN REPLACEMENT
+  Continuous outer-to-H forward-only motion
+  ============================================================
+*/
+
+/* Hide old separate systems */
+.forge-energy-trails,
+.forge-energy-cores,
+.forge-h-rays,
+.forge-h-endpoints,
+.forge-h-charged,
+.forge-h-scan,
+.forge-h-split-ring,
+.forge-h-brace {
+  display: none !important;
+}
+
+/*
+  Keep the outer rectangular loop visible at the beginning,
+  then let the H structure dominate while still feeling connected.
+*/
+.forge-circuit {
+  animation: forge-circuit-clean-cycle 3.6s linear infinite;
+}
+
+@keyframes forge-circuit-clean-cycle {
+  0% {
+    opacity: 0;
+  }
+
+  4%,
+  52% {
+    opacity: 1;
+  }
+
+  58% {
+    opacity: 0.42;
+  }
+
+  64%,
+  92% {
+    opacity: 0.14;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+/*
+  H becomes visible as a connected framework, not a drawn logo.
+*/
+.forge-final-h {
+  opacity: 0;
+  transform: none;
+  animation: forge-final-h-visibility-clean 3.6s linear infinite;
+}
+
+@keyframes forge-final-h-visibility-clean {
+  0%,
+  54% {
+    opacity: 0;
+  }
+
+  58% {
+    opacity: 0.55;
+  }
+
+  64%,
+  92% {
+    opacity: 1;
+  }
+
+  98%,
+  100% {
+    opacity: 0;
+  }
+}
+
+/*
+  Static H lines: dim base structure only.
+*/
+.forge-h-line {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  stroke-dasharray: none !important;
+  stroke-dashoffset: 0 !important;
+  animation: none !important;
+}
+
+.forge-h-left,
+.forge-h-right {
+  stroke: rgba(143, 247, 255, 0.42);
+  stroke-width: 2.6;
+  filter: drop-shadow(0 0 3px rgba(34, 211, 238, 0.22));
+}
+
+.forge-h-middle {
+  stroke: rgba(230, 252, 255, 0.54);
+  stroke-width: 2.9;
+  filter: drop-shadow(0 0 4px rgba(34, 211, 238, 0.28));
+}
+
+/*
+  The four rays are the only moving highlight.
+  They move continuously forward only.
+*/
+.forge-continuous-rays {
+  opacity: 1;
+  pointer-events: none;
+}
+
+.forge-continuous-ray {
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 2.3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+
+  stroke-dasharray: 10 90;
+  stroke-dashoffset: 100;
+  opacity: 0;
+
+  filter:
+    drop-shadow(0 0 2px rgba(255, 255, 255, 1))
+    drop-shadow(0 0 5px rgba(34, 211, 238, 0.95))
+    drop-shadow(0 0 8px rgba(139, 92, 246, 0.55));
+
+  animation: forge-continuous-forward-travel 3.6s linear infinite;
+}
+
+.forge-continuous-ray-one,
+.forge-continuous-ray-two,
+.forge-continuous-ray-three,
+.forge-continuous-ray-four {
+  animation-delay: 0s;
+}
+
+/*
+  Travel from outer points to centre, then continue into H ends.
+  No stop, no reverse, no restart at the centre.
+*/
+@keyframes forge-continuous-forward-travel {
+  0% {
+    stroke-dashoffset: 100;
+    opacity: 0;
+  }
+
+  3% {
+    stroke-dashoffset: 100;
+    opacity: 1;
+  }
+
+  80% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+
+  86% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+
+/*
+  Centre flash only, timed to impact.
+*/
+.forge-h-split-core {
+  fill: #ffffff;
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+
+  filter:
+    drop-shadow(0 0 2px rgba(255, 255, 255, 1))
+    drop-shadow(0 0 6px rgba(34, 211, 238, 1))
+    drop-shadow(0 0 10px rgba(139, 92, 246, 0.72));
+
+  animation: forge-centre-impact-clean 3.6s ease-out infinite;
+}
+
+@keyframes forge-centre-impact-clean {
+  0%,
+  52% {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+
+  56% {
+    opacity: 1;
+    transform: scale(2.1);
+  }
+
+  60% {
+    opacity: 0.75;
+    transform: scale(1);
+  }
+
+  66%,
+  100% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+}
+
+/*
+  Reduced motion fallback.
+*/
+@media (prefers-reduced-motion: reduce) {
+  .forge-circuit,
+  .forge-final-h,
+  .forge-continuous-ray,
+  .forge-h-split-core {
+    animation: none !important;
+  }
+
+  .forge-circuit {
+    opacity: 0.18;
+  }
+
+  .forge-final-h {
+    opacity: 1;
+  }
+
+  .forge-continuous-ray,
+  .forge-h-split-core {
+    opacity: 0;
+  }
+}
+

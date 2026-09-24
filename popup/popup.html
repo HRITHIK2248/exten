@@ -417,69 +417,210 @@
 
           </g>
 
+                    <!--
+            ========================================================
+            Final continuous H system
+            Four rays travel from outer routes through the centre
+            and continue forward into the H endpoints.
+            ========================================================
+          -->
+
+                    <!--
+            ========================================================
+            TRUE LOOP SYSTEM
+            One continuous closed circuit with H integrated inside it.
+            ========================================================
+          -->
+
           <g class="forge-final-h">
 
-            <!-- Left vertical pillar -->
+            <!-- Dim visible guide of the final H -->
             <path
               class="forge-h-line forge-h-left"
-              pathLength="100"
-              d="M 12 7 L 12 41"
+              d="M 12 8 V 40"
             />
 
-            <!-- Right vertical pillar -->
             <path
               class="forge-h-line forge-h-right"
-              pathLength="100"
-              d="M 28 7 L 28 41"
+              d="M 28 8 V 40"
             />
 
-            <!-- Connected centre bridge -->
             <path
               class="forge-h-line forge-h-middle"
-              pathLength="100"
-              d="M 12 24 L 28 24"
+              d="M 12 24 H 28"
             />
 
-            <!-- Existing centre scan -->
-            <path
-              class="forge-h-scan"
-              pathLength="100"
-              d="M 12 24 L 28 24"
-            />
-                      <!--
-            Four energy routes splitting from the centre of the H.
-            Centre point: 20,24
-          -->
+            <!-- One true closed loop path -->
+            <g class="forge-true-loop-system">
+
+              <path
+                class="forge-true-loop-track"
+                pathLength="1000"
+                d="
+                  M 6 8
+                  H 12
+                  V 24
+                  H 20
+                  H 28
+                  V 8
+                  H 34
+                  V 40
+                  H 28
+                  V 24
+                  H 20
+                  H 12
+                  V 40
+                  H 6
+                  Z
+                "
+              />
+
+              <path
+                class="forge-true-loop-light forge-true-loop-light-one"
+                pathLength="1000"
+                d="
+                  M 6 8
+                  H 12
+                  V 24
+                  H 20
+                  H 28
+                  V 8
+                  H 34
+                  V 40
+                  H 28
+                  V 24
+                  H 20
+                  H 12
+                  V 40
+                  H 6
+                  Z
+                "
+              />
+
+              <path
+                class="forge-true-loop-light forge-true-loop-light-two"
+                pathLength="1000"
+                d="
+                  M 6 8
+                  H 12
+                  V 24
+                  H 20
+                  H 28
+                  V 8
+                  H 34
+                  V 40
+                  H 28
+                  V 24
+                  H 20
+                  H 12
+                  V 40
+                  H 6
+                  Z
+                "
+              />
+
+              <path
+                class="forge-true-loop-light forge-true-loop-light-three"
+                pathLength="1000"
+                d="
+                  M 6 8
+                  H 12
+                  V 24
+                  H 20
+                  H 28
+                  V 8
+                  H 34
+                  V 40
+                  H 28
+                  V 24
+                  H 20
+                  H 12
+                  V 40
+                  H 6
+                  Z
+                "
+              />
+
+              <path
+                class="forge-true-loop-light forge-true-loop-light-four"
+                pathLength="1000"
+                d="
+                  M 6 8
+                  H 12
+                  V 24
+                  H 20
+                  H 28
+                  V 8
+                  H 34
+                  V 40
+                  H 28
+                  V 24
+                  H 20
+                  H 12
+                  V 40
+                  H 6
+                  Z
+                "
+              />
+
+            </g>
+
           </g>
 
-          <g class="forge-h-rays">
+                    <!--
+            Four continuous forward-only light routes.
+            Each one starts outside, reaches the centre, then continues
+            into one final H endpoint.
+          -->
 
-            <!-- Centre to upper-left -->
+          <g class="forge-continuous-rays">
+
+            <!-- Top-left outer route → centre → top-left H end -->
             <path
-              class="forge-h-ray forge-h-ray-up-left"
+              class="forge-continuous-ray forge-continuous-ray-one"
               pathLength="100"
-              d="M 20 24 H 12 V 7"
+              d="
+                M 8 7
+                H 20
+                H 12
+                V 7
+              "
             />
 
-            <!-- Centre to lower-left -->
+            <!-- Bottom-left outer route → centre → bottom-left H end -->
             <path
-              class="forge-h-ray forge-h-ray-down-left"
+              class="forge-continuous-ray forge-continuous-ray-two"
               pathLength="100"
-              d="M 20 24 H 12 V 41"
+              d="
+                M 8 41
+                H 20
+                H 12
+                V 41
+              "
             />
 
-            <!-- Centre to upper-right -->
+            <!-- Top-right outer route → centre → top-right H end -->
             <path
-              class="forge-h-ray forge-h-ray-up-right"
+              class="forge-continuous-ray forge-continuous-ray-three"
               pathLength="100"
-              d="M 20 24 H 28 V 7"
+              d="
+                M 32 7
+                H 20
+                H 28
+                V 7
+              "
             />
 
-            <!-- Centre to lower-right -->
+            <!-- Bottom-right outer route → centre → bottom-right H end -->
             <path
-              class="forge-h-ray forge-h-ray-down-right"
+              class="forge-continuous-ray forge-continuous-ray-four"
               pathLength="100"
-              d="M 20 24 H 28 V 41"
+              d="
+                M 32 41
+                H 20
+                H 28
+                V 41
+              "
             />
 
           </g>          
