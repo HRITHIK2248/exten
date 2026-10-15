@@ -1,5 +1,13 @@
 "use strict";
 
+// APK organization context for the website originally analyzed.
+const apkAnalysisTabs = new Map();
+const apkDownloadContexts = new Map();
+const apkRequestContexts = new Map();
+let apkProcessingQueue = Promise.resolve();
+const processedApkDownloads = new Set();
+
+
 console.log("[background] loaded");
 
 const MAX_SAME_SITE_SUBPAGES =
@@ -1154,6 +1162,12 @@ async function scanRenderedDownloadSubpages(
                 : undefined
           }
         );
+
+      apkAnalysisTabs.set(temporaryTab.id, {
+        pageUrl,
+        domain: new URL(pageUrl).hostname,
+        startedAt: Date.now()
+      });
 
      const tabLoadResult =
        await waitForTabLoad(
@@ -6447,44 +6461,53 @@ function isApkDownload(downloadItem) {
   );
 }
 
-async function saveDetectedApk(downloadId) {
-  try {
-    const results = await browser.downloads.search({
-      id: downloadId
-    });
-
-    const downloadItem = results[0];
-
-    if (!downloadItem || !isApkDownload(downloadItem)) {
+function saveDetectedApk(downloadId) {
+  const task = apkProcessingQueue.then(async () => {
+    if (processedApkDownloads.has(downloadId)) return;
+    const [item] = await browser.downloads.search({ id: downloadId });
+    if (!item || item.state !== "complete" || !isApkDownload(item)) return;
+    const context = apkDownloadContexts.get(downloadId) || findApkAnalysisContext(item);
+    if (!context) {
+      console.warn("[APK] No analyzed website associated with download:", downloadId);
       return;
     }
-
-    const apkDetection = {
-      id: downloadItem.id,
-      filename: downloadItem.filename || "",
-      url: downloadItem.finalUrl || downloadItem.url || "",
-      sourceUrl: downloadItem.referrer || "",
-      mime: downloadItem.mime || "",
-      fileSize: downloadItem.fileSize || 0,
-      totalBytes: downloadItem.totalBytes || 0,
-      state: downloadItem.state || "",
-      detectedAt: new Date().toISOString()
+    let result;
+    try {
+      result = await browser.runtime.sendNativeMessage("payment_qr_apk_helper", {
+        action: "organize_apk",
+        filename: item.filename,
+        domain: context.domain
+      });
+    } catch (error) {
+      result = { ok: false, error: error.message || String(error) };
+    }
+    const record = {
+      id: downloadId,
+      domain: context.domain,
+      pageUrl: context.pageUrl,
+      url: item.finalUrl || item.url || "",
+      originalPath: item.filename,
+      filename: result.filename || item.filename.split(/[\\/]/).pop(),
+      path: result.path || item.filename,
+      sha256: result.sha256 || "",
+      size: result.size ?? item.fileSize,
+      status: result.ok ? "complete" : "error",
+      error: result.ok ? "" : result.error || "APK processing failed",
+      processedAt: new Date().toISOString()
     };
-
-    await browser.storage.local.set({
-      latestDetectedApk: apkDetection
-    });
-
-    console.log(
-      "[background] APK download detected:",
-      apkDetection
-    );
-  } catch (error) {
-    console.error(
-      "[background] Could not inspect completed download:",
-      error
-    );
-  }
+    const stored = await browser.storage.local.get({ apkResults: [] });
+    const records = (Array.isArray(stored.apkResults) ? stored.apkResults : [])
+      .filter(entry => entry.id !== downloadId);
+    records.push(record);
+    await browser.storage.local.set({ apkResults: records, latestDetectedApk: record });
+    if (result.ok) {
+      processedApkDownloads.add(downloadId);
+      apkDownloadContexts.delete(downloadId);
+    }
+    console.log("[APK] Processing result:", record);
+  });
+  apkProcessingQueue = task.catch(error => console.error("[APK] Processing failed:", error));
+  return apkProcessingQueue;
 }
 
 
@@ -6492,6 +6515,9 @@ browser.downloads.onCreated.addListener(
   async (
     downloadItem
   ) => {
+    const context = findApkAnalysisContext(downloadItem);
+    if (context) apkDownloadContexts.set(downloadItem.id, context);
+
     if (
       !isApkDownload(
         downloadItem
@@ -6601,3 +6627,42 @@ browser.runtime.onMessage.addListener((message) => {
 });
 
 
+
+
+// Follow requests and redirects from the tracked analysis tabs.
+function rememberApkAnalysisRequest(details) {
+  const context = apkAnalysisTabs.get(details.tabId);
+  if (!context) return;
+  const now = Date.now();
+  for (const url of [details.url, details.redirectUrl]) {
+    if (!url || !/^https?:\/\//i.test(url)) continue;
+    const previous = apkRequestContexts.get(url);
+    // Do not guess ownership when two analyzed domains request the same URL.
+    const ambiguous = previous && now - previous.observedAt < 600000 &&
+      (previous.ambiguous || previous.domain !== context.domain);
+    apkRequestContexts.set(url, { ...context, observedAt: now, ambiguous: !!ambiguous });
+  }
+  for (const [url, entry] of apkRequestContexts) {
+    if (now - entry.observedAt > 600000) apkRequestContexts.delete(url);
+  }
+}
+
+browser.webRequest.onBeforeRequest.addListener(
+  rememberApkAnalysisRequest, { urls: ["<all_urls>"] }
+);
+browser.webRequest.onBeforeRedirect.addListener(
+  rememberApkAnalysisRequest, { urls: ["<all_urls>"] }
+);
+browser.tabs.onCreated.addListener(tab => {
+  const context = apkAnalysisTabs.get(tab.openerTabId);
+  if (context) apkAnalysisTabs.set(tab.id, context);
+});
+browser.tabs.onRemoved.addListener(tabId => apkAnalysisTabs.delete(tabId));
+
+function findApkAnalysisContext(item) {
+  const contexts = [item.finalUrl, item.url].map(url => apkRequestContexts.get(url))
+    .filter(entry => entry && Date.now() - entry.observedAt <= 600000);
+  if (contexts.some(entry => entry.ambiguous)) return null;
+  if (new Set(contexts.map(entry => entry.domain)).size > 1) return null;
+  return contexts[0] || null;
+}

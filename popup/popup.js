@@ -6580,3 +6580,142 @@ function renderKeyboardPageAnalysis(
   );
 }
 
+/*
+ * Show saved APK hashes for the currently analyzed website.
+ */
+const apkHashSection = document.getElementById(
+  "page-analysis-apk-hashes"
+);
+
+const apkHashButton = document.getElementById(
+  "page-analysis-apk-hashes-button"
+);
+
+const apkHashList = document.getElementById(
+  "page-analysis-apk-hash-list"
+);
+
+let apkHashRefreshVersion = 0;
+
+apkHashButton.addEventListener("click", () => {
+  const expanded =
+    apkHashButton.getAttribute("aria-expanded") !== "true";
+
+  apkHashButton.setAttribute(
+    "aria-expanded",
+    String(expanded)
+  );
+
+  apkHashList.classList.toggle("hidden", !expanded);
+});
+
+async function refreshApkHashes() {
+  const version = ++apkHashRefreshVersion;
+
+  try {
+    const [tab] = await browser.tabs.query({
+      active: true,
+      currentWindow: true
+    });
+
+    if (!tab?.url || !/^https?:\/\//i.test(tab.url)) {
+      apkHashSection.classList.add("hidden");
+      return;
+    }
+
+    const domain = new URL(tab.url).hostname;
+
+    const stored = await browser.storage.local.get({
+      apkResults: []
+    });
+
+    if (version !== apkHashRefreshVersion) {
+      return;
+    }
+
+    const records = Array.isArray(stored.apkResults)
+      ? stored.apkResults.filter(
+          (record) => record.domain === domain
+        )
+      : [];
+
+    apkHashList.replaceChildren();
+
+    for (const record of records) {
+      const item = document.createElement("div");
+      item.className = "web-links-item";
+
+      const filename = document.createElement("div");
+      filename.className = "image-title";
+      filename.textContent = record.filename;
+      item.appendChild(filename);
+
+      const value = document.createElement("div");
+      value.className = "detected-value";
+      value.style.whiteSpace = "pre-wrap";
+      value.textContent = record.sha256
+        ? `SHA-256:\n${record.sha256}`
+        : `Processing error: ${record.error || "Hash unavailable"}`;
+      item.appendChild(value);
+
+      if (record.sha256) {
+        const copy = document.createElement("button");
+        copy.type = "button";
+        copy.className = "copy-button";
+        copy.textContent = "Copy hash";
+
+        copy.addEventListener("click", async () => {
+          try {
+            await navigator.clipboard.writeText(record.sha256);
+            showCopyStatus("APK SHA-256 copied.");
+          } catch {
+            showCopyStatus("Could not copy APK hash.");
+          }
+        });
+
+        item.appendChild(copy);
+      }
+
+      const path = document.createElement("div");
+      path.className = "detected-phone-meta";
+      path.textContent = record.path || "";
+      item.appendChild(path);
+
+      apkHashList.appendChild(item);
+    }
+
+    apkHashButton.textContent =
+      `APK hash (${records.length}) ▾`;
+
+    apkHashSection.classList.toggle(
+      "hidden",
+      records.length === 0
+    );
+
+    if (records.length > 0) {
+      pageAnalysisWebLinks.classList.remove("hidden");
+      pageAnalysisResults.classList.remove("hidden");
+      pageAnalysisEmpty.classList.add("hidden");
+    }
+  } catch (error) {
+    console.error("[APK hash] Display failed:", error);
+  }
+}
+
+// Refresh after the existing webpage-analysis renderer finishes.
+const renderPageAnalysisBeforeApkHashes = renderPageAnalysis;
+
+renderPageAnalysis = function (...args) {
+  const result = renderPageAnalysisBeforeApkHashes(...args);
+  refreshApkHashes();
+  return result;
+};
+
+// Update an open popup when a completed APK result arrives.
+browser.storage.onChanged.addListener((changes, area) => {
+  if (area === "local" && changes.apkResults) {
+    refreshApkHashes();
+  }
+});
+
+refreshApkHashes();

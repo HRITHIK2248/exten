@@ -12,7 +12,8 @@
     "clipboardWrite",
     "storage",
     "downloads",
-    "webRequest"
+    "webRequest",
+    "nativeMessaging"
   ],
 
   "background": {
